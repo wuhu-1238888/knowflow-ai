@@ -1,0 +1,24 @@
+# KnowFlow AI 记忆库索引
+
+> 每份文档对应一个 Stage,按工作流"逐个用,不全建"。本表随 Stage 推进更新。
+
+| 文件 | 对应 Stage | 状态 | 人拍板日期 |
+| --- | --- | --- | --- |
+| product-vision.md | 01 项目定义 | 待起草 | — |
+| user-persona.md | 02 用户与场景 | 待起草 | — |
+| problem-analysis.md | 03 问题与需求分析 | 待起草 | — |
+| competitor-analysis.md | 04 竞品与市场 | 待起草 | — |
+| PRD.md | 05 PRD | 待起草 | — |
+| product-architecture.md | 06 产品架构 | 待起草 | — |
+| ai-design.md | 07 AI/Agent 设计 | 待起草 | — |
+| technical-design.md | 08 技术设计 | 待起草 | — |
+| implementation-plan.md | 10 实施计划(Round 2) | 未开始 | — |
+| progress.md | 执行期全程 | 已创建 | — |
+
+配套文档(不在 memory-bank):
+
+- `docs/evaluation-plan.md` — 最小 RAG 评测方案(Stage 07 起草、Stage 08 定稿)
+- `docs/demo-data/documents/` — NovaTech 虚构演示文档集(synthetic,20 篇)
+- `docs/demo-data/evaluation/cases.yaml` — 评测集夹具(14 例,人工标注)
+- `docs/eval-results/` — 评测实测结果 run-*.json(入库,不手填数字)
+- `docs/templates/` — 工作流模板暂存区(Stage 10 完成后删除)

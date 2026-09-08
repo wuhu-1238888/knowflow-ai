@@ -1,0 +1,26 @@
+# 依赖与构建产物
+node_modules/
+.next/
+out/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 密钥与环境
+.env
+.env.*
+!.env.example
+
+# 运行时数据(向量库/上传目录/数据库)——演示文档与评测夹具不入此列
+runtime/
+*.db
+*.sqlite
+*.log
+
+# 系统与 Office 锁文件
+.DS_Store
+Thumbs.db
+~$*
