@@ -37,7 +37,7 @@
 | 任务 | 内容 | 状态 | commit |
 | --- | --- | --- | --- |
 | 3.1.1 | 仓库骨架与双进程一键启动 | 已完成(Next.js 15.5 + FastAPI 0.141,双进程验证通过,typecheck 干净) | `ea10794` |
-| 3.1.2 | 设计 token 落库 + 应用外壳 | 进行中 | — |
+| 3.1.2 | 设计 token 落库 + 应用外壳 | 已完成(24/24 测试绿:L1 token 对拍 12 + 组件/外壳 12;typecheck 干净;四页 L4 走查 200;src/ 零硬编码 hex 与零白名单外渐变) | `47f8005` |
 | 3.1.3 | 元数据库与仓库层 | 未开始 | — |
 
 ## 修订
@@ -49,6 +49,7 @@
 | # | 问题 | 根因 | 修复 |
 | --- | --- | --- | --- |
 | 1 | pip 安装报 UnicodeDecodeError(gbk) | requirements.txt 含中文注释,pip 在中文 Windows 以 GBK 解码 UTF-8 失败 | 依赖清单注释改纯 ASCII(2026-09-09,任务 3.1.1) |
+| 2 | Vitest 5 不解 TSX(jsx: "preserve") | Next.js 要求 tsconfig jsx=preserve,Vitest 5(rolldown)不转换 JSX,import-analysis 报语法错 | 新增 devDependency @vitejs/plugin-react(Babel 转换)+ 未开 globals 时显式 cleanup 注册(2026-09-09,任务 3.1.2) |
 
 ## 未解决的问题(遗留,编号滚动)
 

@@ -89,7 +89,7 @@
 - 验证:L3 基础组件渲染+状态测试;L1 token 一致性比对(脚本对拍 front matter 与 token 文件数值);L4 走查:外壳符合 DesignRules(侧栏/焦点环/无 pill 按钮)
 - 产出物:token 模块、app shell、基础组件、测试
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit 见 progress.md Round 3)。** 交付:theme.css(@theme 1:1 映射 front matter)、icons/ui 基础组件(Button/Input/Badge/EmptyState/PageHeader)、AppShell+Sidebar 224px+TopBar 48px(移动抽屉)、四页路由骨架、四套测试(24 用例:token 对拍 12 + 组件/外壳 12)。偏差记录:①字体加载用 @fontsource 本地打包(Inter Variable + Geist Mono)替代 next/font/google——离线/国内网络安全,无构建时 Google 请求;②Vitest 5 在 tsconfig jsx: "preserve"(Next.js 要求)下不解 JSX,新增 devDependency @vitejs/plugin-react(Babel 转换)解决;③theme.css 首版漏 --text-numeric 与 code/micro 字体映射,由对拍测试 L1 捕获后补齐——对拍测试价值已实证;④BrandMark SVG 白色线条改用 var(--color-ink-inverse),src/ 零硬编码 hex(grep 已验)。
 
 ### 任务 3.1.3 元数据库与仓库层
 - 做什么:SQLite(标准库 sqlite3)落地 Document/Chunk/EvaluationCase/EvaluationRun/QALog 五实体(字段照 Stage 08 数据模型,不含租户/角色);LanceDB 初始化目录(runtime/lancedb);Repository 层;演示文档与评测集装载脚本(导入 20 篇文档元数据 + cases.yaml 14 例)
