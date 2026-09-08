@@ -10,7 +10,7 @@
 
 | 任务 | 内容 | 状态 | commit |
 | --- | --- | --- | --- |
-| Stage 01 | product-vision.md | 待起草 | — |
+| Stage 01 | product-vision.md | 已完成(2026-09-08 人拍板) | — |
 | Stage 02 | user-persona.md | 待起草 | — |
 | Stage 03 | problem-analysis.md | 待起草 | — |
 | Stage 04 | competitor-analysis.md | 待起草 | — |

@@ -4,7 +4,7 @@
 
 | 文件 | 对应 Stage | 状态 | 人拍板日期 |
 | --- | --- | --- | --- |
-| product-vision.md | 01 项目定义 | 待起草 | — |
+| product-vision.md | 01 项目定义 | 已完成 | 2026-09-08 |
 | user-persona.md | 02 用户与场景 | 待起草 | — |
 | problem-analysis.md | 03 问题与需求分析 | 待起草 | — |
 | competitor-analysis.md | 04 竞品与市场 | 待起草 | — |
