@@ -9,7 +9,7 @@
 | problem-analysis.md | 03 问题与需求分析 | 已完成 | 2026-09-08 |
 | competitor-analysis.md | 04 竞品与市场 | 已完成 | 2026-09-08 |
 | PRD.md | 05 PRD | 已完成 | 2026-09-08 |
-| product-architecture.md | 06 产品架构 | 待起草 | — |
+| product-architecture.md | 06 产品架构 | 已完成 | 2026-09-08 |
 | ai-design.md | 07 AI/Agent 设计 | 待起草 | — |
 | technical-design.md | 08 技术设计 | 待起草 | — |
 | implementation-plan.md | 10 实施计划(Round 2) | 未开始 | — |
