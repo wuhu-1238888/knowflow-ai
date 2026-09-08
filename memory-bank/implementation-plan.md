@@ -97,7 +97,7 @@
 - 验证:L1 CRUD + 边界(空值/重复 id)+ 幂等断言;数据库文件落在 runtime/(不入库)
 - 产出物:schema、repository、装载脚本、测试
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit `639213a`)。** 交付:config.py(路径 env 可覆盖,测试用 KNOWFLOW_RUNTIME_DIR 指向 tmp)、db.py(五表 schema+外键+CHECK 约束,LanceDB 仅初始化目录)、repository.py(CRUD+幂等 upsert+数组字段 JSON 往返+删除级联)、seed.py(20 文档元数据+14 例,固定日期 2026-09-01,幂等)、pytest 21 例全绿。偏差记录:①chunk 表 metadata 缺省 '{}' 与 schema DEFAULT 对齐(调用方可省略);②seed 首次运行前必须 init_db(真实 runtime 目录不存在时 connect 失败,由端到端验证暴露,L1 已补);③UI 四态文档状态 vs 库三态(parsing/indexed/failed)的映射留待 3.3.3 前端实现时处理,库不扩字段。
 
 ## Phase 3.2 纵向核心链路
 
