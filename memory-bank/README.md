@@ -18,6 +18,7 @@
 配套文档(不在 memory-bank):
 
 - `docs/evaluation-plan.md` — 最小 RAG 评测方案(Stage 07 起草、Stage 08 定稿)
+- `design/DesignRules.md` + `design/DesignSystem.md` — 设计系统(Stage 09 定稿,UI 编码唯一依据)
 - `docs/demo-data/documents/` — NovaTech 虚构演示文档集(synthetic,20 篇)
 - `docs/demo-data/evaluation/cases.yaml` — 评测集夹具(14 例,人工标注)
 - `docs/eval-results/` — 评测实测结果 run-*.json(入库,不手填数字)
