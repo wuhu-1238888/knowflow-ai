@@ -29,8 +29,8 @@
 
 | 任务 | 内容 | 状态 | commit |
 | --- | --- | --- | --- |
-| Stage 09 | design/DesignRules.md + design/DesignSystem.md(设计系统) | 已完成(2026-09-09 人拍板:品牌方向确认 + 自有设计语言接受) | — |
-| Stage 10 | implementation-plan.md(实施计划) | 进行中 | — |
+| Stage 09 | design/DesignRules.md + design/DesignSystem.md(设计系统) | 已完成(2026-09-09 人拍板:品牌方向确认 + 自有设计语言接受) | `504c832` |
+| Stage 10 | implementation-plan.md(实施计划) | 已完成(2026-09-09 人拍板:τ=0.30/常量初值/偏差记录 1 全接受) | — |
 
 ## 修订
 

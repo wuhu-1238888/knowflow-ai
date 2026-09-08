@@ -12,7 +12,7 @@
 | product-architecture.md | 06 产品架构 | 已完成 | 2026-09-08 |
 | ai-design.md | 07 AI/Agent 设计 | 已完成 | 2026-09-08 |
 | technical-design.md | 08 技术设计 | 已完成 | 2026-09-09 |
-| implementation-plan.md | 10 实施计划(Round 2) | 未开始 | — |
+| implementation-plan.md | 10 实施计划(Round 2) | 已完成 | 2026-09-09 |
 | progress.md | 执行期全程 | 已创建 | — |
 
 配套文档(不在 memory-bank):
