@@ -1,8 +1,18 @@
-// 占位页:任务 3.1.1 仅验证骨架与双进程;应用外壳与四页路由由 3.1.2 实现。
-export default function Home() {
+import { IconQuestion } from "@/components/icons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+
+/* 问答页骨架:完整交互(AnswerSheet/引用/拒答)在任务 3.3.2 实现。 */
+
+export default function AskPage() {
   return (
-    <main>
-      <p>KnowFlow AI 骨架已就绪(Stage 11 · 任务 3.1.1)</p>
-    </main>
+    <div>
+      <PageHeader title="知识问答" />
+      <EmptyState
+        icon={<IconQuestion />}
+        title="问答功能实施中"
+        description="任务 3.3.2 将在这里交付:提问 → 带引用的答卷式回答 → 点开来源核对 → 无答案时明确拒答。"
+      />
+    </div>
   );
 }

@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* ============================================================
+   KnowFlow AI Design Tokens
+   单一事实来源:design/DesignSystem.md(YAML front matter)
+   数值必须与 front matter 一致;一致性由 src/tests/tokens.test.ts 对拍保证。
+   需要新值:先改 DesignSystem.md,再改本文件,再跑对拍测试。
+   ============================================================ */
+
+@theme {
+  /* ── 品牌与 AI 强调色 ── */
+  --color-brand-600: #5B5BD6;
+  --color-brand-700: #4949C4;
+  --color-brand-800: #3B3BAD;
+  --color-brand-100: #ECEBFF;
+  --color-brand-50: #F6F6FF;
+
+  /* ── AI 渐变(白名单:品牌标记 / AI 眉题点 / 生成中胶囊) ── */
+  --color-ai-gradient: linear-gradient(135deg, #5B5BD6 0%, #8B7CF0 100%);
+
+  /* ── 中性色 ── */
+  --color-canvas: #F6F6F8;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F0F1F4;
+  --color-hairline: #E7E8EC;
+  --color-hairline-strong: #D8D9E0;
+  --color-ink: #18181B;
+  --color-ink-2: #52525B;
+  --color-ink-3: #71717A;
+  --color-ink-disabled: #A1A1AB;
+  --color-ink-inverse: #FFFFFF;
+  --color-overlay: rgba(24, 24, 27, 0.32);
+  --color-overlay-light: rgba(24, 24, 27, 0.16);
+  --color-focus-ring: rgba(91, 91, 214, 0.25);
+
+  /* ── 语义色 ── */
+  --color-success: #16A34A;
+  --color-success-text: #15803D;
+  --color-success-bg: #E9F7EF;
+  --color-warning: #B45309;
+  --color-warning-bg: #FBF3E2;
+  --color-warning-border: #E9D5A0;
+  --color-danger: #DC2626;
+  --color-danger-text: #B91C1C;
+  --color-danger-bg: #FDECEC;
+  --color-info: #2563EB;
+  --color-info-bg: #EAF2FD;
+
+  /* ── 检索模式/来源徽标(固定语义,禁止换用) ── */
+  --color-mode-keyword: #475569;
+  --color-mode-keyword-bg: #EFF1F4;
+  --color-mode-vector: #0E7490;
+  --color-mode-vector-bg: #E7F4F6;
+  --color-mode-hybrid: #3B3BAD;
+  --color-mode-hybrid-bg: #ECEBFF;
+
+  /* ── 字体 ── */
+  --font-sans: "Inter Variable", -apple-system, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", Consolas, "SF Mono", monospace;
+
+  /* ── 字号阶(9 级,禁止阶外新造) ── */
+  --text-display-lg: 28px;
+  --text-display-lg--line-height: 1.35;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-heading-1: 20px;
+  --text-heading-1--line-height: 1.4;
+  --text-heading-1--letter-spacing: -0.01em;
+  --text-heading-2: 16px;
+  --text-heading-2--line-height: 1.5;
+  --text-heading-3: 14px;
+  --text-heading-3--line-height: 1.5;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 1.7;
+  --text-body-md: 15px;
+  --text-body-md--line-height: 1.6;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 1.5;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.5;
+  --text-micro: 11px;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.04em;
+  --text-micro--font-weight: 500;
+  --text-code-md: 13px;
+  --text-code-md--line-height: 1.6;
+  --text-code-md--font-family: var(--font-mono);
+  --text-code-sm: 12px;
+  --text-code-sm--line-height: 1.5;
+  --text-code-sm--font-family: var(--font-mono);
+  --text-numeric: 13px;
+  --text-numeric--line-height: 1.5;
+  --text-numeric--font-family: var(--font-mono);
+  --text-numeric--font-variant-numeric: tabular-nums;
+
+  /* ── 圆角 ── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+
+  /* ── 阴影(3 档封顶:flat 默认 / hover / floating) ── */
+  --shadow-hover: 0 1px 2px rgba(24, 24, 27, 0.05);
+  --shadow-floating: 0 8px 24px rgba(24, 24, 27, 0.08),
+    0 1px 2px rgba(24, 24, 27, 0.04);
+
+  /* ── 动效 ── */
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: ease-out;
+}
+
+@layer base {
+  html {
+    @apply bg-canvas text-ink font-sans text-body-md antialiased;
+  }
+
+  body {
+    @apply m-0 min-h-screen;
+  }
+
+  /* 焦点环:2px brand 描边 + 2px 偏移,全站统一(DesignSystem 状态规范) */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+
+  /* 中英文/数字混排间距:自动由字体栈处理,不额外加空格样式 */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
