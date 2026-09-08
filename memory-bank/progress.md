@@ -17,7 +17,7 @@
 | Stage 05 | PRD.md | 已完成(2026-09-08 人拍板,P0 冻结) | — |
 | Stage 06 | product-architecture.md | 已完成(2026-09-08 人拍板) | — |
 | Stage 07 | ai-design.md + NovaTech 文档集 + cases.yaml 评测集 | 已完成(2026-09-08 人拍板;14 例已标注) | — |
-| Stage 08 | technical-design.md + docs/evaluation-plan.md 定稿 | 待起草 | — |
+| Stage 08 | technical-design.md + docs/evaluation-plan.md 定稿 | 已完成(2026-09-09 人拍板,选型 9 项+阈值定稿) | — |
 | 初始化 | 骨架 + CLAUDE.md + 模板暂存区 + git init | 已完成 | — |
 
 - **主要修改**:建立项目骨架;拷贝工作流模板至 `docs/templates/`;改写 CLAUDE.md(背景/验收锚点/隔离红线/git 纪律);git init 首次提交。
