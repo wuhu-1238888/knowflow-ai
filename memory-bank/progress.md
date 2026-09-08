@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | Stage 01 | product-vision.md | 已完成(2026-09-08 人拍板) | — |
 | Stage 02 | user-persona.md | 已完成(2026-09-08 人拍板) | — |
-| Stage 03 | problem-analysis.md | 待起草 | — |
+| Stage 03 | problem-analysis.md | 已完成(2026-09-08 人拍板,R-08 冲突呈现进 P0) | — |
 | Stage 04 | competitor-analysis.md | 待起草 | — |
 | Stage 05 | PRD.md | 待起草 | — |
 | Stage 06 | product-architecture.md | 待起草 | — |
