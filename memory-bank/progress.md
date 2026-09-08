@@ -30,7 +30,15 @@
 | 任务 | 内容 | 状态 | commit |
 | --- | --- | --- | --- |
 | Stage 09 | design/DesignRules.md + design/DesignSystem.md(设计系统) | 已完成(2026-09-09 人拍板:品牌方向确认 + 自有设计语言接受) | `504c832` |
-| Stage 10 | implementation-plan.md(实施计划) | 已完成(2026-09-09 人拍板:τ=0.30/常量初值/偏差记录 1 全接受) | — |
+| Stage 10 | implementation-plan.md(实施计划) | 已完成(2026-09-09 人拍板:τ=0.30/常量初值/偏差记录 1 全接受) | `2a66fba` |
+
+## Round 3:Stage 11 编码(M1 工程地基)
+
+| 任务 | 内容 | 状态 | commit |
+| --- | --- | --- | --- |
+| 3.1.1 | 仓库骨架与双进程一键启动 | 已完成(Next.js 15.5 + FastAPI 0.141,双进程验证通过,typecheck 干净) | `ea10794` |
+| 3.1.2 | 设计 token 落库 + 应用外壳 | 进行中 | — |
+| 3.1.3 | 元数据库与仓库层 | 未开始 | — |
 
 ## 修订
 
@@ -40,6 +48,7 @@
 
 | # | 问题 | 根因 | 修复 |
 | --- | --- | --- | --- |
+| 1 | pip 安装报 UnicodeDecodeError(gbk) | requirements.txt 含中文注释,pip 在中文 Windows 以 GBK 解码 UTF-8 失败 | 依赖清单注释改纯 ASCII(2026-09-09,任务 3.1.1) |
 
 ## 未解决的问题(遗留,编号滚动)
 
@@ -49,3 +58,4 @@
 | 2 | git remote 未设置/公开与否未定 | 仓库发布 | 已解决(2026-09-08 人拍板:暂不设 remote,仅本地提交;公开决策留待后续) | 已解决 |
 | 3 | OCR/多模态文档不支持 | 文档解析范围 | 已入 vision 不做清单(MVP 边界),记录 Future Expansion | 挂账 |
 | 4 | 商业 Embedding/Reranker 未对比 | 选型完整性 | 可选:实测达标后做对照实验,不阻塞 MVP | 挂账 |
+| 5 | npm audit:next@15 传递依赖 postcss 2 个 advisories(1 moderate/1 high) | 前端依赖 | 修复需升级 next@16(破坏性变更,偏离已拍板选型)→ **待人选型裁决**;本地 demo 不暴露公网,风险低 | 挂账 |

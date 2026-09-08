@@ -81,7 +81,7 @@
 - 验证:L2 直连:一条命令拉起后前端 200 + /health 200;`.env`/runtime 不入库;L1 无
 - 产出物:目录骨架、启动脚本、.env.example、README 快速开始初稿、依赖清单(pyproject/package.json)
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit `ea10794`)。偏差记录:①requirements.txt 注释改纯 ASCII(pip 在中文 Windows 以 GBK 解码 UTF-8 失败);②验证时本机 3000 端口被其他进程占用,Next.js 自动落到 3001,项目默认仍为 3000。**
 
 ### 任务 3.1.2 设计 token 落库 + 应用外壳
 - 做什么:把 DesignSystem.md front matter 转为前端 token 模块(CSS variables + Tailwind 映射,单一来源,数值与 front matter 一致);实现应用外壳(侧栏 224px 白底发丝线、品牌标记、四页路由骨架、768–1023px 顶栏、焦点环);基础组件 Button/Input/Badge/EmptyState
