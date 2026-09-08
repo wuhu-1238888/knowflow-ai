@@ -7,7 +7,7 @@
 | product-vision.md | 01 项目定义 | 已完成 | 2026-09-08 |
 | user-persona.md | 02 用户与场景 | 已完成 | 2026-09-08 |
 | problem-analysis.md | 03 问题与需求分析 | 已完成 | 2026-09-08 |
-| competitor-analysis.md | 04 竞品与市场 | 待起草 | — |
+| competitor-analysis.md | 04 竞品与市场 | 已完成 | 2026-09-08 |
 | PRD.md | 05 PRD | 待起草 | — |
 | product-architecture.md | 06 产品架构 | 待起草 | — |
 | ai-design.md | 07 AI/Agent 设计 | 待起草 | — |
