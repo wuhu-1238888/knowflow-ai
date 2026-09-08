@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!-- synthetic: true | NovaTech 虚构演示文档 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>NovaTech 代码规范</title>
+</head>
+<body>
+<h1>NovaTech 代码规范</h1>
+<p>版本:2026-06 | 适用对象:全体研发人员</p>
+
+<h2>分支与提交</h2>
+<ul>
+<li>主干分支 main 始终可发布;功能开发从 main 拉出特性分支,合并前必须通过 CI。</li>
+<li>提交信息遵循 conventional 格式,例如 <code>feat(alert): 增加告警聚合策略</code>。</li>
+<li>每次提交只做一件事,禁止夹带无关改动。</li>
+</ul>
+
+<h2>代码质量</h2>
+<ul>
+<li>所有新代码必须配单元测试,核心模块覆盖率不低于 80%。</li>
+<li>接口变更必须同步更新 API 文档,并标注废弃字段的替代方案。</li>
+<li>禁止在代码中硬编码密钥,敏感配置一律走密钥管理服务。</li>
+</ul>
+
+<h2>评审</h2>
+<ul>
+<li>合并前至少一名同组同事评审通过;新人前 3 个月的代码需带教导师加审。</li>
+<li>评审关注:边界条件、错误处理、日志可读性,而非代码风格(风格交给 lint)。</li>
+</ul>
+
+<h2>发布前自检</h2>
+<p>发布前确认:CI 全绿、CCR 已关联、灰度预案已准备、值班同事知情。</p>
+</body>
+</html>

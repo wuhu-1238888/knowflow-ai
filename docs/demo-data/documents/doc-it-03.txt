@@ -1,0 +1,29 @@
+synthetic: true | NovaTech 虚构演示文档
+
+NovaTech 企业邮箱设置指南
+适用对象:全体新员工 | 版本:2026-04
+
+一、邮箱基本信息
+
+- 邮箱地址:姓名拼音@novatech.example.com,例如 linxiao@novatech.example.com
+- 网页版入口:mail.novatech.example.com(浏览器直接访问,使用企业账号登录)
+- 邮箱容量:每人 50GB,附件单封上限 25MB,大文件请使用共享盘分享链接
+
+二、电脑端设置(Outlook 等客户端)
+
+1. 添加账户时选择「IMAP」协议类型;
+2. 接收服务器:imap.novatech.example.com,端口 993,加密 SSL;
+3. 发送服务器:smtp.novatech.example.com,端口 465,加密 SSL;
+4. 用户名填完整邮箱地址,密码为办公门户密码。
+
+三、手机端设置(移动端配置)
+
+1. 手机上下载任意邮件 App(系统自带或 Outlook),添加「IMAP」账户;
+2. 服务器地址与电脑端相同:收信 imap.novatech.example.com、发信 smtp.novatech.example.com;
+3. 打开「推送通知」即可实时接收公司邮件,出差或远程办公也能及时收发;
+4. 部分安卓机型需在邮件 App 中关闭「电池优化」,否则新邮件通知会延迟。
+
+四、注意事项
+
+- 公司邮箱仅用于工作沟通,禁止注册与工作无关的第三方服务;
+- 离职流程启动后,邮箱保留 30 天自动停用,重要邮件请提前备份。

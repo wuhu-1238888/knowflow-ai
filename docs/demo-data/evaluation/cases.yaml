@@ -1,0 +1,173 @@
+# KnowFlow AI 评测集夹具(cases.yaml)
+# 状态:待人工标注 —— 每例须经人审题/出题并填写 annotated_by 后方可用于评测
+# 规则:先定文档集、后出题标注;文档集改动 → 受影响样例重新标注并记录
+# 字段:id / category / query / expected_behavior(answer|refuse|conflict)
+#       / expected_doc_ids(期望命中文档,至少 doc 级)/ expected_chunk_ids(标注期补充)
+#       / expected_answer_points(人工标注答案要点)/ annotated_by(标注签字)
+
+cases:
+  # ── 1. 精确关键词检索(2 例)──
+  - id: C01
+    category: 精确关键词检索
+    query: "年假有几天?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-hr-05]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "年假 10 天"
+      - "司龄每满一年增加 1 天,上限 15 天"
+    annotated_by: ""
+
+  - id: C02
+    category: 精确关键词检索
+    query: "VPN 客户端在哪里下载?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-it-02]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "下载地址 https://vpn.novatech.example.com/client"
+      - "用企业账号登录后选择操作系统版本"
+    annotated_by: ""
+
+  # ── 2. 语义检索(2 例)──
+  - id: C03
+    category: 语义检索
+    query: "休假要提前多久申请?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-hr-05]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "提前 2 个工作日提交申请"
+    annotated_by: ""
+
+  - id: C04
+    category: 语义检索
+    query: "怎么在手机上收发公司邮件?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-it-03]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "添加 IMAP 账户"
+      - "服务器地址 imap.novatech.example.com / smtp.novatech.example.com"
+      - "打开推送通知"
+    annotated_by: ""
+
+  # ── 3. 多文档问题(2 例)──
+  - id: C05
+    category: 多文档问题
+    query: "入职第一周要办哪些事?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-hr-02, doc-it-01]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "到人事行政部办理入职手续并签署劳动合同"
+      - "完成企业账号开通与密码修改"
+      - "配置 VPN 与公司邮箱"
+      - "完成信息安全培训并通过考试"
+    annotated_by: ""
+
+  - id: C06
+    category: 多文档问题
+    query: "新人第一次参与代码发布要做什么?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-tech-03, doc-tech-04]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "确认已获得生产环境访问权限(按次授权)"
+      - "确认代码通过 CI 检查"
+      - "由带教导师陪同完成首次发布"
+      - "异常时第一时间回滚"
+    annotated_by: ""
+
+  # ── 4. 相似文档干扰(2 例)──
+  - id: C07
+    category: 相似文档干扰
+    query: "打印机卡纸了怎么办?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-it-04]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "按面板「卡纸处理」按钮让滚轮自动退纸"
+      - "失败则打开前盖沿出纸方向轻轻抽出"
+      - "仍无法解决联系 IT 服务台"
+    annotated_by: ""
+
+  - id: C08
+    category: 相似文档干扰
+    query: "怎么修改公司账号密码?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-it-01]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "办公门户「账号设置 - 修改密码」"
+      - "密码不少于 10 位,含大小写字母与数字"
+      - "每 90 天强制更换一次"
+    annotated_by: ""
+
+  # ── 5. 专业术语(2 例)──
+  - id: C09
+    category: 专业术语
+    query: "NF-ID 是什么?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-prod-02]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "NovaFlow ID 的缩写"
+      - "统一身份标识"
+      - "单点登录办公门户/邮箱/VPN/NovaFlow 控制台等内部系统"
+    annotated_by: ""
+
+  - id: C10
+    category: 专业术语
+    query: "POD 是什么流程?"
+    expected_behavior: answer
+    expected_doc_ids: [doc-prod-02]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "Publish On Demand,按需发布流程"
+      - "拆解为构建→灰度→全量三个阶段"
+    annotated_by: ""
+
+  # ── 6. 知识库无答案(2 例)──
+  - id: C11
+    category: 知识库无答案
+    query: "公司有宠物寄养福利吗?"
+    expected_behavior: refuse
+    expected_doc_ids: []
+    expected_chunk_ids: []
+    expected_answer_points: []
+    annotated_by: ""
+
+  - id: C12
+    category: 知识库无答案
+    query: "出差住宿费标准是多少?"
+    expected_behavior: refuse
+    expected_doc_ids: []
+    expected_chunk_ids: []
+    expected_answer_points: []
+    annotated_by: ""
+
+  # ── 7. 文档冲突(2 例)──
+  - id: C13
+    category: 文档冲突
+    query: "市内交通费每天报销上限是多少?"
+    expected_behavior: conflict
+    expected_doc_ids: [doc-hr-03, doc-hr-04]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "2024 版:每日上限 100 元"
+      - "2026 版:每日上限 150 元"
+      - "并列呈现双方来源,不替用户选边"
+    annotated_by: ""
+
+  - id: C14
+    category: 文档冲突
+    query: "报销凭证需要保留多久?"
+    expected_behavior: conflict
+    expected_doc_ids: [doc-hr-03, doc-hr-04]
+    expected_chunk_ids: []
+    expected_answer_points:
+      - "2024 版:保留 6 个月"
+      - "2026 版:保留 2 年"
+      - "并列呈现双方来源,不替用户选边"
+    annotated_by: ""
