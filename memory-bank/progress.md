@@ -14,7 +14,7 @@
 | Stage 02 | user-persona.md | 已完成(2026-09-08 人拍板) | — |
 | Stage 03 | problem-analysis.md | 已完成(2026-09-08 人拍板,R-08 冲突呈现进 P0) | — |
 | Stage 04 | competitor-analysis.md | 已完成(2026-09-08 人拍板,轻量版) | — |
-| Stage 05 | PRD.md | 待起草 | — |
+| Stage 05 | PRD.md | 已完成(2026-09-08 人拍板,P0 冻结) | — |
 | Stage 06 | product-architecture.md | 待起草 | — |
 | Stage 07 | ai-design.md + NovaTech 文档集 + cases.yaml 评测集 | 待起草 | — |
 | Stage 08 | technical-design.md + docs/evaluation-plan.md 定稿 | 待起草 | — |
