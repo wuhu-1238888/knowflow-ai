@@ -1,0 +1,24 @@
+{
+  "name": "knowflow-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KnowFlow AI 企业 AI 知识助手(RAG 作品集项目,演示数据为虚构企业 NovaTech)",
+  "scripts": {
+    "dev": "concurrently -k -n web,rag -c blue,magenta \"next dev\" \"python -m uvicorn rag_service.main:app --host 127.0.0.1 --port 8000\"",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "concurrently": "^9.0.0",
+    "typescript": "^5.6.0"
+  }
+}
