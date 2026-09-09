@@ -19,7 +19,6 @@ def index_demo_docs(docs_dir: Path | None = None) -> dict:
     init_db()
     repo = Repository()
     index = LanceIndex(BgeM3Embedder())
-    index.ensure_fts()
 
     summary: dict[str, int] = {}
     failures: list[str] = []
@@ -57,6 +56,8 @@ def index_demo_docs(docs_dir: Path | None = None) -> dict:
 
     for failure in failures:
         print(f"[FAILED] {failure}", flush=True)
+    # 全部数据写入后再建倒排索引(索引先建后写不自动编入新行)
+    index.ensure_fts()
     print(
         f"共 {len(summary)} 篇,{sum(summary.values())} chunks"
         + (f",{len(failures)} 篇失败" if failures else "")

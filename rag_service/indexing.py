@@ -91,9 +91,17 @@ class LanceIndex:
         self._db = lancedb.connect(str(db_path or get_lancedb_dir()))
         self._table = None
 
+    @staticmethod
+    def _table_names(db) -> list[str]:
+        """list_tables() 跨版本兼容:新版返回带 .tables 的对象,旧版返回 list。"""
+        listing = db.list_tables()
+        if isinstance(listing, list):
+            return listing
+        return getattr(listing, "tables", None) or []
+
     def _ensure_table(self):
         if self._table is None:
-            if TABLE_NAME in self._db.table_names():
+            if TABLE_NAME in self._table_names(self._db):
                 self._table = self._db.open_table(TABLE_NAME)
             else:
                 self._table = self._db.create_table(
@@ -102,11 +110,24 @@ class LanceIndex:
         return self._table
 
     def ensure_fts(self) -> None:
-        """text 列全文倒排(hybrid 检索依赖);已存在则跳过。"""
+        """text 列全文倒排(hybrid 检索依赖);已存在则跳过。
+
+        ngram(2,3) tokenizer:中文无语言级分词,2/3 字符 n-gram 实测命中精准
+        (「报销」→报销凭证、「请假」→请假制度)。
+        注意:索引建在数据写入前时新行不会自动编入 → 每次 ensure 后 optimize。
+        """
         table = self._ensure_table()
         index_types = [str(idx.index_type).upper() for idx in table.list_indices()]
         if "FTS" not in index_types:
-            table.create_index("text", config=FTS())
+            table.create_index(
+                "text",
+                config=FTS(
+                    base_tokenizer="ngram",
+                    ngram_min_length=2,
+                    ngram_max_length=3,
+                ),
+            )
+        table.optimize()  # 增量行编入倒排(实测:先建索引后写入 72 行不自动编入)
 
     def index_document(self, doc_id: str, text: str) -> int:
         """分块+嵌入+幂等写入;返回写入 chunk 数(空文本=0)。"""
