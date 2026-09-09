@@ -13,6 +13,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Callable
 
@@ -119,8 +120,12 @@ def run_mode(
     doc_commit: str,
     params_hash: str,
     top_k: int = TOP_K,
+    run_id: str | None = None,
 ) -> dict:
-    """单模式全量评测(纯计算,不落盘)。search_fn(query, mode) → SearchHit 列表。"""
+    """单模式全量评测(纯计算,不落盘)。search_fn(query, mode) → SearchHit 列表。
+
+    run_id 缺省随机生成;API 批次(3.3.4)预先落行 running,须沿用行 id。
+    """
     per_case = []
     for case in cases:
         in_metrics = case["expected_behavior"] in METRIC_BEHAVIORS
@@ -161,7 +166,7 @@ def run_mode(
         [e["expected_doc_ids"] for e in metric_cases],
     )
     return {
-        "run_id": new_id("run-"),
+        "run_id": run_id or new_id("run-"),
         "mode": mode,
         "params_hash": params_hash,
         "doc_commit": doc_commit,
@@ -237,6 +242,93 @@ def record_run(result: dict, repo: Repository) -> None:
             "created_at": result["created_at"],
         }
     )
+
+
+def start_eval(repo: Repository, out_dir: Path) -> dict:
+    """API 入口(3.3.4 评测页「运行评测」):先落三行 running 再起后台线程顺序跑三模式。
+
+    返回 {run_ids, created_at};批次以 created_at 分组(三行同值,由前端按批聚合)。
+    运行中的并发控制(409)由 API 层按 running 行判断,本函数不做。
+    """
+    created_at = now_iso()
+    params_hash = compute_params_hash()
+    doc_commit = get_doc_commit()
+    run_ids = []
+    for mode in MODES:
+        run_id = new_id("run-")
+        run_ids.append(run_id)
+        repo.create_run(
+            {
+                "id": run_id,
+                "mode": mode,
+                "params_hash": params_hash,
+                "doc_commit": doc_commit,
+                "metrics_json": "{}",
+                "status": "running",
+                "created_at": created_at,
+            }
+        )
+    thread = threading.Thread(
+        target=_run_batch,
+        args=(repo, out_dir, created_at, params_hash, doc_commit, run_ids),
+        name="eval-batch",
+        daemon=True,
+    )
+    thread.start()
+    return {"run_ids": run_ids, "created_at": created_at}
+
+
+def _run_batch(
+    repo: Repository,
+    out_dir: Path,
+    created_at: str,
+    params_hash: str,
+    doc_commit: str,
+    run_ids: list[str],
+) -> None:
+    """后台线程:懒加载真实模型,三模式顺序评测,完成/失败回写对应行。
+
+    与 CLI main 同源流程;逐例明细 per_case_json 落库(UI 展开用),
+    run JSON 同时落盘 out_dir(运行态产物,不入库)。
+    """
+    embedder = BgeM3Embedder()
+    index = LanceIndex(embedder)
+    service = RetrievalService(index, embedder, reranker=BgeReranker())
+
+    def search_fn(query: str, mode: str) -> list:
+        return service.search(query, mode=mode, top_k=TOP_K)
+
+    cases = load_cases()
+    for run_id, mode in zip(run_ids, MODES):
+        try:
+            result = run_mode(
+                mode,
+                search_fn,
+                cases,
+                created_at,
+                doc_commit,
+                params_hash,
+                run_id=run_id,
+            )
+            save_run(result, out_dir)
+            repo.update_run(
+                run_id,
+                {
+                    "status": "completed",
+                    "metrics_json": json.dumps(result["metrics"], ensure_ascii=False),
+                    "per_case_json": json.dumps(result["per_case"], ensure_ascii=False),
+                },
+            )
+        except Exception as exc:  # 单模式失败 → 该行 failed,不中断其余模式
+            repo.update_run(
+                run_id,
+                {
+                    "status": "failed",
+                    "metrics_json": json.dumps(
+                        {"error": f"{type(exc).__name__}: {exc}"}, ensure_ascii=False
+                    ),
+                },
+            )
 
 
 def main(argv: list[str] | None = None) -> int:

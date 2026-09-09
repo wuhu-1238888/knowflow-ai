@@ -159,13 +159,30 @@ class Repository:
     # ── EvaluationRun ──
 
     def create_run(self, run: dict) -> None:
+        run = dict(run)
+        run.setdefault("status", "completed")
+        run.setdefault("per_case_json", None)
         with self._conn() as conn:
             conn.execute(
                 """
-                INSERT INTO evaluation_runs (id, mode, params_hash, doc_commit, metrics_json, created_at)
-                VALUES (:id, :mode, :params_hash, :doc_commit, :metrics_json, :created_at)
+                INSERT INTO evaluation_runs
+                  (id, mode, params_hash, doc_commit, metrics_json, status, per_case_json, created_at)
+                VALUES (:id, :mode, :params_hash, :doc_commit, :metrics_json, :status, :per_case_json, :created_at)
                 """,
                 run,
+            )
+
+    def update_run(self, run_id: str, fields: dict) -> None:
+        """局部更新(3.3.4:状态回写/指标与逐例明细落库);键来自固定白名单。"""
+        allowed = {"status", "metrics_json", "per_case_json", "params_hash", "doc_commit"}
+        updates = {key: fields[key] for key in fields if key in allowed}
+        if not updates:
+            return
+        assignments = ", ".join(f"{key} = :{key}" for key in updates)
+        with self._conn() as conn:
+            conn.execute(
+                f"UPDATE evaluation_runs SET {assignments} WHERE id = :id",
+                {**updates, "id": run_id},
             )
 
     def get_run(self, run_id: str) -> dict | None:

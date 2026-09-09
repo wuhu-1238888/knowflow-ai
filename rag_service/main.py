@@ -12,16 +12,19 @@ ask 30s 上限 = LLM 调用超时(真实 provider 骨架实现时生效);本地�
 
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .answer_pipeline import ASK_MODES, AnswerPipeline
 from .chunker import chunk_text
-from .config import get_uploads_dir
+from .config import get_runtime_dir, get_uploads_dir
 from .db import init_db
+from .eval_engine import start_eval
 from .indexing import BgeM3Embedder, LanceIndex
 from .llm_adapter import get_provider
 from .parsing import SUPPORTED_EXTENSIONS, EmptyTextError, ParsingError, parse_file
@@ -38,13 +41,14 @@ class FeedbackRequest(BaseModel):
     rating: Literal["useful", "useless"]
 
 
-def create_app(service=None, pipeline=None, repo=None, index=None) -> FastAPI:
+def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=None) -> FastAPI:
     app = FastAPI(title="KnowFlow AI RAG Service", version="0.1.0")
     state = {
         "service": service,      # 测试注入的检索服务
         "pipeline": pipeline,    # 测试注入的问答管线
         "repo": repo,            # 测试注入的仓库
         "index": index,          # 测试注入的向量索引(检索与文档管理共享)
+        "eval_runner": eval_runner,  # 测试注入的评测启动函数(默认 start_eval)
         # 生产懒加载(共享同一 embedder/index,reranker 按模式按需)
         "embedder": None,
         "service_plain": None,
@@ -311,6 +315,73 @@ def create_app(service=None, pipeline=None, repo=None, index=None) -> FastAPI:
             "status": "indexed",
             "chunk_count": count,
         }
+
+    # ── 评测(3.3.4:运行 / 列表 / 明细;数字只来自 run 结果,禁止虚构)──
+
+    def _run_summary(row: dict) -> dict:
+        """evaluation_runs 行 → API 摘要(metrics 解析;per_case 不随列表返回)。"""
+        return {
+            "run_id": row["id"],
+            "mode": row["mode"],
+            "params_hash": row["params_hash"],
+            "doc_commit": row["doc_commit"],
+            "created_at": row["created_at"],
+            "status": row.get("status", "completed"),
+            "metrics": json.loads(row["metrics_json"] or "{}"),
+            "has_per_case": bool(row.get("per_case_json")),
+        }
+
+    @app.get("/api/eval/runs")
+    def list_eval_runs() -> dict:
+        """全部评测运行摘要(新批次在前;同批次三行 created_at 相同)。"""
+        return {"runs": [_run_summary(row) for row in _repo().list_runs()]}
+
+    @app.get("/api/eval/runs/{run_id}")
+    def get_eval_run(run_id: str) -> dict:
+        """单次运行明细(含逐例 per_case,供 RunList 展开)。"""
+        row = _repo().get_run(run_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="评测运行不存在")
+        summary = _run_summary(row)
+        if row.get("per_case_json"):
+            summary["per_case"] = json.loads(row["per_case_json"])
+        return summary
+
+    @app.post("/api/eval/run")
+    def run_eval() -> JSONResponse:
+        """启动三模式评测(后台线程,约数分钟);已有批次在跑 → 409。
+
+        超 30 分钟未完成的 running 行视为中断(服务重启遗留),标记 failed 后放行。
+        """
+        repo = _repo()
+        fresh_running: list[str] = []
+        for row in repo.list_runs():
+            if row.get("status") != "running":
+                continue
+            try:
+                created = datetime.fromisoformat(row["created_at"])
+            except ValueError:
+                fresh_running.append(row["id"])
+                continue
+            age = (datetime.now(timezone.utc) - created).total_seconds()
+            if age > 1800:
+                repo.update_run(
+                    row["id"],
+                    {
+                        "status": "failed",
+                        "metrics_json": json.dumps(
+                            {"error": "运行中断(超时未完成)"}, ensure_ascii=False
+                        ),
+                    },
+                )
+            else:
+                fresh_running.append(row["id"])
+        if fresh_running:
+            raise HTTPException(status_code=409, detail="已有评测正在运行,请等待完成")
+        runner = state["eval_runner"] or start_eval
+        out_dir = get_runtime_dir() / "eval-runs"  # 运行态产物,不入库
+        started = runner(repo, out_dir)
+        return JSONResponse(status_code=202, content=started)
 
     return app
 

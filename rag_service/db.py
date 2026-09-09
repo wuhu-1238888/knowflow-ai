@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS evaluation_runs (
   params_hash TEXT NOT NULL,
   doc_commit TEXT,
   metrics_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'completed'
+    CHECK (status IN ('running', 'completed', 'failed')),
+  per_case_json TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -71,6 +74,25 @@ CREATE TABLE IF NOT EXISTS qa_feedback (
 """
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """轻量迁移:老库 evaluation_runs 补 status/per_case_json 列(3.3.4 评测页)。
+
+    CREATE TABLE IF NOT EXISTS 不会改已有表,列缺失时用 ALTER 补上;
+    历史 CLI 批次(status 缺省 completed / per_case 为空)语义不受影响。
+    """
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(evaluation_runs)")}
+    if "status" not in cols:
+        conn.execute(
+            "ALTER TABLE evaluation_runs "
+            "ADD COLUMN status TEXT NOT NULL DEFAULT 'completed' "
+            "CHECK (status IN ('running', 'completed', 'failed'))"
+        )
+    if "per_case_json" not in cols:
+        conn.execute(
+            "ALTER TABLE evaluation_runs ADD COLUMN per_case_json TEXT"
+        )
+
+
 def init_db(db_path: Path | None = None, lancedb_dir: Path | None = None) -> Path:
     """初始化元数据库与 LanceDB 目录,返回实际 db 路径。
 
@@ -83,6 +105,7 @@ def init_db(db_path: Path | None = None, lancedb_dir: Path | None = None) -> Pat
     conn = get_connection(db_path)
     try:
         conn.executescript(SCHEMA)
+        _migrate(conn)
         conn.commit()
     finally:
         conn.close()
