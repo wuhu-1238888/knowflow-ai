@@ -1,18 +1,12 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconFiles } from "@/components/icons";
 import type { Citation } from "@/lib/rag";
-import type { AskMode } from "./segmented";
 
 /* AnswerSheet(3.3.2 最小切片):元信息行 → AI 眉题+正文 → 依据带 → 复制操作。
  * 双向证据联动 / CitationChip 悬停 / SourceDrawer / 重新生成 / 有用·无用 = 3.3.2 全量补齐。
+ * 2026-09-09 人拍板:元信息行不暴露检索策略与工程调试值(模式徽标/最高分/耗时),
+ * 仅保留用户价值信息「已基于企业知识库检索 · 依据 n 条」;三模式对比见评测页。
  * 回答正文轻量清洗 markdown 符号(加粗、行内代码、标题 #)后按行保留——真实 provider 的富文本渲染后续决定。 */
-
-const MODE_BADGE: Record<AskMode, "mode-vector" | "mode-hybrid" | "mode-hybrid"> = {
-  vector: "mode-vector",
-  hybrid: "mode-hybrid",
-  hybrid_rerank: "mode-hybrid",
-};
 
 export function formatAnswer(answer: string): string {
   return answer
@@ -26,26 +20,22 @@ export function formatAnswer(answer: string): string {
 export interface AnswerSheetProps {
   answer: string;
   citations: Citation[];
-  confidence: number;
-  mode: AskMode;
-  elapsedMs: number;
 }
 
-export function AnswerSheet({ answer, citations, confidence, mode, elapsedMs }: AnswerSheetProps) {
+export function AnswerSheet({ answer, citations }: AnswerSheetProps) {
   return (
     <section
       aria-label="回答"
       className="rounded-lg border border-hairline bg-surface"
     >
       <div className="border-b border-hairline px-4 py-3">
-        {/* 元信息行:分数与数量一律 numeric token(DesignRules「数字」) */}
-        <div className="flex flex-wrap items-center gap-2 text-numeric text-ink-2">
-          <Badge variant={MODE_BADGE[mode]}>{mode === "hybrid_rerank" ? "混合+重排" : mode === "hybrid" ? "混合" : "向量"}</Badge>
-          <span>依据 {citations.length} 条</span>
+        {/* 元信息行:依据数用 numeric token(DesignRules「数字」) */}
+        <div className="flex flex-wrap items-center gap-2 text-body-sm text-ink-2">
+          <span>已基于企业知识库检索</span>
           <span aria-hidden="true">·</span>
-          <span>最高分 {confidence.toFixed(2)}</span>
-          <span aria-hidden="true">·</span>
-          <span>耗时 {(elapsedMs / 1000).toFixed(1)}s</span>
+          <span>
+            依据 <span className="text-numeric">{citations.length}</span> 条
+          </span>
         </div>
       </div>
       <div className="px-4 py-4">

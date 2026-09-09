@@ -17,34 +17,26 @@ describe("formatAnswer", () => {
 });
 
 describe("AnswerSheet", () => {
-  it("渲染 AI 眉题、元信息行与依据带(含复制按钮)", () => {
+  it("渲染 AI 眉题、元信息行与依据带(含复制按钮),元信息不含工程调试值", () => {
     render(
       <AnswerSheet
         answer="答案正文"
         citations={[
           { index: 1, doc_id: "doc-1", chunk_id: "doc-1#0", quote: "引用片段" },
         ]}
-        confidence={0.66}
-        mode="hybrid_rerank"
-        elapsedMs={2300}
       />,
     );
     expect(screen.getByText("AI 回答")).toBeTruthy();
-    expect(screen.getByText("依据 1 条")).toBeTruthy();
-    expect(screen.getByText("耗时 2.3s")).toBeTruthy();
+    expect(screen.getByText("已基于企业知识库检索")).toBeTruthy();
+    expect(screen.getByText("依据与来源(1)")).toBeTruthy();
     expect(screen.getByRole("button", { name: "复制回答" })).toBeTruthy();
+    // 2026-09-09 人拍板:模式徽标/最高分/耗时不出现在主流程
+    expect(screen.queryByText(/最高分/)).toBeNull();
+    expect(screen.queryByText(/耗时/)).toBeNull();
   });
 
   it("无依据时不渲染依据带", () => {
-    render(
-      <AnswerSheet
-        answer="答案正文"
-        citations={[]}
-        confidence={0.66}
-        mode="vector"
-        elapsedMs={1200}
-      />,
-    );
+    render(<AnswerSheet answer="答案正文" citations={[]} />);
     expect(screen.queryByText(/依据与来源/)).toBeNull();
   });
 });

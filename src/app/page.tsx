@@ -7,13 +7,14 @@ import { AskTextarea } from "@/components/ask/ask-textarea";
 import { ConflictPanel } from "@/components/ask/conflict-panel";
 import { ErrorCallout } from "@/components/ask/error-callout";
 import { NoAnswerCallout } from "@/components/ask/no-answer-callout";
-import { Segmented, type AskMode } from "@/components/ask/segmented";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { ApiError, askQuestion, TAU_BY_MODE, type AskResponse } from "@/lib/rag";
+import { ApiError, askQuestion, type AskResponse } from "@/lib/rag";
 
 /* 问答页(3.3.2 最小闭环切片):提问 → 带引用回答 / 拒答 / 冲突 / 失败,回答与依据同屏并置。
- * 必备区块与 DesignRules 对齐;示例问题来自评测集(C01/C13/C11)。
+ * 2026-09-09 人拍板:检索策略不暴露给普通用户——页面固定使用默认策略
+ * Hybrid + Rerank(client 默认,与后端 /api/ask 默认一致),三模式对比见评测页。
+ * 示例问题来自评测集(C01/C13/C11)。
  * C13 在 Mock 下演示双口径并列回答(冲突面板 UI 已实现,后端 conflicts 恒 null → 遗留 #1)。
  * 切片未含:双向证据联动 / SourceDrawer / 重新生成 / 有用·无用(3.3.2 全量补齐);
  * 加载态合并为「AI 生成中」胶囊(检索中 Skeleton 待流式分段后细分)。 */
@@ -26,7 +27,6 @@ const EXAMPLE_QUESTIONS = [
 ];
 
 export default function AskPage() {
-  const [mode, setMode] = useState<AskMode>("hybrid_rerank");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AskResponse | null>(null);
@@ -41,7 +41,7 @@ export default function AskPage() {
     setError(null);
     setResult(null);
     try {
-      setResult(await askQuestion(trimmed, mode));
+      setResult(await askQuestion(trimmed));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "请求失败,请稍后重试");
     } finally {
@@ -51,9 +51,7 @@ export default function AskPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="知识问答">
-        <Segmented value={mode} onChange={setMode} />
-      </PageHeader>
+      <PageHeader title="知识问答" />
 
       <div className="flex flex-col gap-2">
         <AskTextarea
@@ -79,7 +77,7 @@ export default function AskPage() {
             AI 生成中
           </span>
           <p className="text-body-sm text-ink-2">
-            正在检索知识库并生成回答,首次调用需加载模型,约 1 分钟…
+            正在检索企业知识库并生成回答,首次回答约需 1 分钟…
           </p>
         </div>
       ) : null}
@@ -110,21 +108,12 @@ export default function AskPage() {
       ) : null}
 
       {!loading && !error && result && result.no_answer ? (
-        <NoAnswerCallout
-          confidence={result.confidence}
-          threshold={TAU_BY_MODE[result.mode] ?? TAU_BY_MODE[mode] ?? 0}
-        />
+        <NoAnswerCallout />
       ) : null}
 
       {!loading && !error && result && !result.no_answer && result.answer !== null ? (
         <div className="flex flex-col gap-3">
-          <AnswerSheet
-            answer={result.answer}
-            citations={result.citations}
-            confidence={result.confidence}
-            mode={mode}
-            elapsedMs={result.elapsed_ms}
-          />
+          <AnswerSheet answer={result.answer} citations={result.citations} />
           {result.conflicts ? <ConflictPanel conflicts={result.conflicts} /> : null}
         </div>
       ) : null}
