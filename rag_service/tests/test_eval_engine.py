@@ -139,7 +139,9 @@ def test_single_failure_records_skipped():
 def test_hits_recorded_with_scores_and_sources():
     result = run_fixed(mode="hybrid_rerank")
     first = result["per_case"][0]["hits"][0]
-    assert set(first) == {"chunk_id", "doc_id", "source", "score", "rerank_score"}
+    assert set(first) == {
+        "chunk_id", "doc_id", "source", "score", "rerank_score", "vec_score",
+    }
     assert result["per_case"][0]["hits"][1]["doc_id"] == "doc-hr-05"
 
 

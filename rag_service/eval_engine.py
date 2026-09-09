@@ -100,12 +100,14 @@ def _filename_ts(created_at: str) -> str:
 
 
 def _hit_dict(hit) -> dict:
+    # vec_score:hybrid 候选在向量路的余弦分(hybrid 拒答阈值口径,3.2.6e τ 校准取数)
     return {
         "chunk_id": hit.chunk_id,
         "doc_id": hit.doc_id,
         "source": hit.source,
         "score": hit.score,
         "rerank_score": hit.rerank_score,
+        "vec_score": hit.vec_score,
     }
 
 
