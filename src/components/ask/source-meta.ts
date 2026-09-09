@@ -1,7 +1,9 @@
 import type { BadgeVariant } from "@/components/ui/badge";
+import { formatUploadDate } from "@/lib/format";
 
 /* 来源/文档状态 → 徽标语义映射(DesignSystem:来源徽标与文档状态徽标语义固定,禁止换用)。
-   EvidenceItem 与 SourceDrawer 共用。 */
+   EvidenceItem 与 SourceDrawer 共用;formatUploadDate 已迁至 lib/format(文档库页共用),
+   此处重导出保持既有引用不变。 */
 
 export const SOURCE_META: Record<
   string,
@@ -35,7 +37,4 @@ export function statusMeta(status: string): {
   return STATUS_META[status] ?? { label: "待索引", variant: "neutral" };
 }
 
-/** 上传时间 ISO → 日期(YYYY-MM-DD);空串/非法 → 空串(展示层回退不显示)。 */
-export function formatUploadDate(iso: string): string {
-  return /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(0, 10) : "";
-}
+export { formatUploadDate };

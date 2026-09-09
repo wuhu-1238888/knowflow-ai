@@ -4,15 +4,22 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DELETE as deleteDocument } from "@/app/api/documents/[id]/route";
+import { GET as getDocuments } from "@/app/api/documents/route";
+import { DELETE as deleteDocumentRoute } from "@/app/api/documents/[id]/route";
+import { POST as postReindex } from "@/app/api/documents/[id]/reindex/route";
 import { POST as postAsk } from "@/app/api/ask/route";
+import { POST as postIngest } from "@/app/api/ingest/route";
 import { POST as postFeedback } from "@/app/api/qa/[id]/feedback/route";
 import {
   ApiError,
   askQuestion,
+  deleteDocument,
+  listDocuments,
   proxyToRag,
   RAG_BASE_URL,
+  reindexDocument,
   sendFeedback,
+  uploadDocument,
 } from "@/lib/rag";
 
 const ASK_BODY = {
@@ -138,7 +145,7 @@ describe("proxyToRag / api/ask", () => {
 describe("其余代理路由(路径与 method 转发)", () => {
   it("DELETE /api/documents/:id 转发带 id", async () => {
     const mock = stubFetch(async () => jsonResponse({ ok: true }));
-    const response = await deleteDocument(
+    const response = await deleteDocumentRoute(
       new Request("http://localhost:3001/api/documents/doc-x", { method: "DELETE" }),
       { params: Promise.resolve({ id: "doc-x" }) },
     );
@@ -232,6 +239,157 @@ describe("typed client sendFeedback(FR-12)", () => {
       name: "ApiError",
       status: 404,
       message: "QA 记录不存在",
+    });
+  });
+});
+
+const DOC_ITEM = {
+  id: "doc-1",
+  title: "员工手册.md",
+  file_type: "md",
+  status: "indexed",
+  uploaded_at: "2026-09-05T10:30:00",
+  synthetic: false,
+  chunk_count: 3,
+};
+
+const INGEST_BODY = {
+  doc_id: "doc-1",
+  title: "员工手册.md",
+  file_type: "md",
+  status: "indexed",
+  chunk_count: 3,
+};
+
+describe("文档管理 BFF 路由(3.3.3)", () => {
+  it("GET /api/documents 透传分页 query 到 FastAPI", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ items: [DOC_ITEM], total: 1, page: 2, page_size: 50 }),
+    );
+    const response = await getDocuments(
+      new Request("http://localhost:3001/api/documents?page=2&page_size=50"),
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${RAG_BASE_URL}/api/documents?page=2&page_size=50`);
+    expect(init.method).toBe("GET");
+  });
+
+  it("POST /api/ingest 转发(multipart 字节 + content-type 透传)", async () => {
+    const mock = stubFetch(async () => jsonResponse(INGEST_BODY));
+    const file = new File(["demo"], "a.md", { type: "text/markdown" });
+    const form = new FormData();
+    form.append("file", file);
+    const response = await postIngest(
+      new Request("http://localhost:3001/api/ingest", {
+        method: "POST",
+        body: form,
+      }),
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${RAG_BASE_URL}/api/ingest`);
+    expect(init.method).toBe("POST");
+    // proxyToRag 读 arrayBuffer 转发原始字节,multipart 边界与文件名由 content-type 携带
+    expect(init.body).toBeInstanceOf(ArrayBuffer);
+    expect(init.headers).toMatchObject({
+      "content-type": expect.stringContaining("multipart/form-data"),
+    });
+    const bytes = Buffer.from(init.body as ArrayBuffer).toString("utf-8");
+    expect(bytes).toContain('filename="a.md"');
+    expect(bytes).toContain("demo");
+  });
+
+  it("POST /api/documents/:id/reindex 转发带 id", async () => {
+    const mock = stubFetch(async () => jsonResponse(INGEST_BODY));
+    const response = await postReindex(
+      new Request("http://localhost:3001/api/documents/doc-1/reindex", {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ id: "doc-1" }) },
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${RAG_BASE_URL}/api/documents/doc-1/reindex`);
+    expect(init.method).toBe("POST");
+  });
+});
+
+describe("typed client 文档管理(3.3.3)", () => {
+  it("listDocuments:GET /api/documents?page=&page_size= 并解析 items/total", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ items: [DOC_ITEM], total: 1, page: 1, page_size: 100 }),
+    );
+    const result = await listDocuments(1, 100);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].chunk_count).toBe(3);
+    expect(result.total).toBe(1);
+    expect(mock).toHaveBeenCalledWith("/api/documents?page=1&page_size=100");
+  });
+
+  it("listDocuments:失败 → ApiError", async () => {
+    stubFetch(async () => jsonResponse({ error: "数据库错误" }, 500));
+    await expect(listDocuments()).rejects.toMatchObject({
+      name: "ApiError",
+      status: 500,
+      message: "数据库错误",
+    });
+  });
+
+  it("uploadDocument:POST /api/ingest 以 FormData 传文件(不手动设 content-type)", async () => {
+    const mock = stubFetch(async () => jsonResponse(INGEST_BODY));
+    const file = new File(["demo"], "a.md", { type: "text/markdown" });
+    const result = await uploadDocument(file);
+    expect(result.doc_id).toBe("doc-1");
+    expect(result.chunk_count).toBe(3);
+    expect(mock).toHaveBeenCalledWith(
+      "/api/ingest",
+      expect.objectContaining({ method: "POST" }),
+    );
+    const init = (mock.mock.calls[0] as [string, RequestInit])[1];
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get("file")).toBe(file);
+  });
+
+  it("uploadDocument:422 解析失败 → ApiError(可读信息,页面刷新呈现 failed 行)", async () => {
+    stubFetch(async () => jsonResponse({ error: "文件解析失败:无法提取文本" }, 422));
+    await expect(uploadDocument(new File(["x"], "a.md"))).rejects.toMatchObject({
+      name: "ApiError",
+      status: 422,
+      message: "文件解析失败:无法提取文本",
+    });
+  });
+
+  it("deleteDocument:DELETE /api/documents/:id;404 → ApiError", async () => {
+    const mock = stubFetch(async () => jsonResponse({ deleted: "doc-1" }));
+    await deleteDocument("doc-1");
+    expect(mock).toHaveBeenCalledWith(
+      "/api/documents/doc-1",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+
+    // client 层按 BFF 契约取 {error}(detail→error 转换由 route 层负责,前文已测)
+    stubFetch(async () => jsonResponse({ error: "文档不存在" }, 404));
+    await expect(deleteDocument("ghost")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+      message: "文档不存在",
+    });
+  });
+
+  it("reindexDocument:POST /api/documents/:id/reindex;500 → ApiError", async () => {
+    const mock = stubFetch(async () => jsonResponse(INGEST_BODY));
+    await reindexDocument("doc-1");
+    expect(mock).toHaveBeenCalledWith(
+      "/api/documents/doc-1/reindex",
+      expect.objectContaining({ method: "POST" }),
+    );
+
+    stubFetch(async () => jsonResponse({ error: "源文件不存在" }, 500));
+    await expect(reindexDocument("doc-1")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 500,
+      message: "源文件不存在",
     });
   });
 });

@@ -111,3 +111,24 @@ export function IconThumbDown(props: SVGProps<SVGSVGElement>) {
     </Base>
   );
 }
+
+export function IconUpload(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M8 11V3" />
+      <path d="M5 6l3-3 3 3" />
+      <path d="M3 10.5V12a1.5 1.5 0 0 0 1.5 1.5h7A1.5 1.5 0 0 0 13 12v-1.5" />
+    </Base>
+  );
+}
+
+export function IconTrash(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M2.5 4.5h11" />
+      <path d="M6.5 4.5v-1a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" />
+      <path d="M4 4.5l.7 8a1.5 1.5 0 0 0 1.5 1.4h3.6a1.5 1.5 0 0 0 1.5-1.4l.7-8" />
+      <path d="M6.8 7.5v4M9.2 7.5v4" />
+    </Base>
+  );
+}

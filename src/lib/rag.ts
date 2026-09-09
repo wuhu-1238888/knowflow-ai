@@ -161,3 +161,98 @@ export async function sendFeedback(
     );
   }
 }
+
+/* ── /api/documents 文档库(3.3.3:上传/列表/删除/重建索引,FR-01/FR-09)── */
+
+export interface DocumentInfo {
+  id: string;
+  title: string;
+  file_type: string;
+  status: "parsing" | "indexed" | "failed";
+  uploaded_at: string;
+  synthetic: number;
+  chunk_count: number;
+}
+
+export interface DocumentListResponse {
+  items: DocumentInfo[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface IngestResponse {
+  doc_id: string;
+  title: string;
+  file_type: string;
+  status: "indexed";
+  chunk_count: number;
+}
+
+/** 文档列表(GET /api/documents;演示规模 page_size=100 一页拉全,分页参数保留)。 */
+export async function listDocuments(
+  page = 1,
+  pageSize = 100,
+): Promise<DocumentListResponse> {
+  const response = await fetch(`/api/documents?page=${page}&page_size=${pageSize}`);
+  const body = (await response.json().catch(() => null)) as
+    | DocumentListResponse
+    | { error?: string }
+    | null;
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      (body as { error?: string } | null)?.error ?? "文档列表加载失败,请稍后重试",
+    );
+  }
+  return body as DocumentListResponse;
+}
+
+/** 上传文档(POST /api/ingest,multipart;422 = 解析失败,行保留 failed 可重试)。 */
+export async function uploadDocument(file: File): Promise<IngestResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch("/api/ingest", { method: "POST", body: form });
+  const body = (await response.json().catch(() => null)) as
+    | IngestResponse
+    | { error?: string }
+    | null;
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      (body as { error?: string } | null)?.error ?? "上传失败,请稍后重试",
+    );
+  }
+  return body as IngestResponse;
+}
+
+/** 删除文档(DELETE /api/documents/:id;FR-09 人显式触发,前端走二次确认模态)。 */
+export async function deleteDocument(id: string): Promise<void> {
+  const response = await fetch(`/api/documents/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new ApiError(response.status, body?.error ?? "删除失败,请稍后重试");
+  }
+}
+
+/** 重建索引(POST /api/documents/:id/reindex;解析失败行的「重试」同用此端点)。 */
+export async function reindexDocument(id: string): Promise<IngestResponse> {
+  const response = await fetch(`/api/documents/${encodeURIComponent(id)}/reindex`, {
+    method: "POST",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | IngestResponse
+    | { error?: string }
+    | null;
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      (body as { error?: string } | null)?.error ?? "重建索引失败,请稍后重试",
+    );
+  }
+  return body as IngestResponse;
+}
