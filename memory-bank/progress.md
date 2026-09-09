@@ -58,7 +58,7 @@
 | 3.2.3 | IndexingService | 已完成(pytest 54/54 绿;L2 实测 20 篇 72 chunks、重跑幂等、20/20 indexed) | `fc0e736` |
 | 3.2.4 | RetrievalService | 已完成(pytest 70/70 绿;L2 真实模型四模式冒烟:报销凭证查询 doc-hr-03/04 置顶,rerank 后无关文档压末位) | `c71a58d` |
 | 3.2.5 | EvaluationEngine | 已完成(pytest 92/92 绿;L5 两轮实测:hybrid_rerank Hit@5 12/12、MRR 0.9583 → **M2a 达标**;FR-08 两轮逐例一致) | `1ebfa52`(run 产物 `b013b2f`) |
-| 3.2.6 | AnswerPipeline + /api/ask | 未开始 | — |
+| 3.2.6 | AnswerPipeline + /api/ask | 已完成代码与实测(pytest 127/127 绿;真实链路 200:答案+3 引用+QA 日志落库;L5 三模式 42 例全链路跑通;τ 校准报告待人拍板) | `de08d7d`(L5/校准产物待提交) |
 
 ### M2a 验收记录(2026-09-09,拍板人:王荟茹)
 

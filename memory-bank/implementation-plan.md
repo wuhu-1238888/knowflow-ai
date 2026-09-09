@@ -149,7 +149,7 @@
 - 验证:L1 拒答阈值边界/引用映射/schema 校验单测;L2 四类用例:成功 + 非法参数 400 + 空索引→拒答 + LLM 异常→降级话术;L5 全量 14 例 schema 校验 + 生成层人工核对(要点覆盖率 ≥90%/幻觉 0/citation 0 错误/拒答 2/2 且 0 误拒/冲突 2/2);**M2b 验收:五条达标线全过(实测,人核对)+ τ 校准值拍板**
 - 产出物:answer_pipeline.py、ask API、QA 日志落库、测试
 
-**状态:未开始。**
+**状态:2026-09-09 已完成代码与实测,待人拍板 M2b。** 交付:answer_pipeline.py(τ 拒答阈值 / context 组装 / 引用规则侧重建 / 冲突校验 / 异常降级与重试)、main.py POST /api/ask(懒加载真实模型、QA 日志全字段落库)、gen_eval.py(L5 生成层 14 例 × 3 模式全链路 + 人工核对表,3.2.6d 新增产物)、pytest 127/127 绿(L1 拒答边界/引用重建/重试 17 + L2 API 6 + gen_eval 11)。实测:POST /api/ask 真实链路 200(年假问题 → 答案 + 3 条规则侧引用,confidence 0.8336,QA 日志 2 行落库);检索层重跑三模式与 M2a 两轮逐例一致(FR-08 复验);τ 校准报告 docs/eval-results/tau-calibration.md(τ_rerank=0.30 维持 + τ_v=0.58 建议,待人拍板)。偏差记录:①τ 口径按模式区分——hybrid_rerank 用 rerank_score、vector 用余弦、hybrid 用向量路余弦分(RRF 分数仅表排名无绝对语义不可阈值化),SearchHit 增 vec_score 透传;②token 预算以字符近似(4500 字符 ≈ 3000 token,中文 1.5 字符/token);③keyword 模式不进 /api/ask(仅作评测对照),ASK_MODES 收窄为三模式;④LLM 异常降级返回 200 + 标准话术(30s 超时/503 保留给真实 provider 骨架);⑤L5 生成层五线中要点覆盖率/幻觉/冲突三线受 Mock 能力限制(摘首句生成、conflicts 恒 None),真实验收归遗留 #1 真实 provider 重跑。
 
 ## Phase 3.3 横向功能扩展
 
