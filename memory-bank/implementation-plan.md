@@ -117,7 +117,7 @@
 - 验证:L1 固定 5 格式夹具断言(非空/标题/段落完整);边界:空文件/损坏文件/纯表格文档;**返工预算见上表**
 - 产出物:parsing.py、5 格式解析夹具、测试
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit `eae4e75`)。** 交付:parsing.py(parse_file 统一入口→ParseResult{doc_id,title,text,warnings};ParsingError/EmptyTextError 分层失败策略;md 去注释/围栏、txt 跳过 synthetic 标记取题、html 标签剥离+实体反转+表格管道流、pdf PyMuPDF 纯文本、docx Heading 优先取题+真表格降级;_clean_common 空行压缩)、夹具 7 件(rag_service/tests/fixtures/:sample.md/txt/html 手工固定 + sample.pdf/sample.docx/table-only.docx 由一次性脚本生成后脚本即删,固定内容不再重新生成;PDF/DOCX 保留 synthetic 标注)、测试 12 例(5 格式夹具断言+空文件/损坏 pdf/docx/纯表格/不支持扩展名/文件名取 doc_id/20 篇真实演示文档全量可解析),pytest 40/40 绿。偏差记录:①夹具 PDF/DOCX 由专用 sample.md 生成而非演示文档(可控性优先:演示文档较长且无表格,夹具含表格/实体/围栏等边界结构;与演示文档结构对齐的回归由 test_all_demo_documents_parse 覆盖);②PDF 内 synthetic 标注转 marker 行且置于标题之后(PDF 取首非空行为标题,标注在首行会污染标题提取)。
 
 ### 任务 3.2.3 IndexingService(分块 + Embedding + 索引)
 - 做什么:分块策略规则化(标题+段落切分;单 chunk 上限约 1000 字符;超长强制切分;重叠约 100 字符;参数为常量,改动须人拍板+重跑评测);bge-m3 本地加载(首次运行下载至 runtime/models/);LanceDB 写入(向量列 + 全文倒排,原生 hybrid);幂等(重复索引库状态不变);批量索引 CLI(`python -m rag_service index-docs` 装载 20 篇演示文档)

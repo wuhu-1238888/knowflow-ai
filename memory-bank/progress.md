@@ -54,7 +54,7 @@
 | 任务 | 内容 | 状态 | commit |
 | --- | --- | --- | --- |
 | 3.2.1 | LLM 适配层 + Mock Provider | 已完成(pytest 28/28 绿;Mock 确定性输出与 AnswerDraft 契约断言通过) | `afee029` |
-| 3.2.2 | ParsingService(5 格式解析) | 未开始 | — |
+| 3.2.2 | ParsingService(5 格式解析) | 已完成(pytest 40/40 绿;5 格式夹具断言+边界 12 例;20 篇演示文档全量可解析) | `eae4e75` |
 | 3.2.3 | IndexingService | 未开始 | — |
 | 3.2.4 | RetrievalService | 未开始 | — |
 | 3.2.5 | EvaluationEngine | 未开始 | — |
