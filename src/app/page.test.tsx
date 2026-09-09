@@ -16,9 +16,22 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 const ANSWER_RESPONSE = {
-  answer: "新员工入职第一年享有 **8 天** 年假。",
+  qa_id: "qa-test-1",
+  answer: "新员工入职第一年享有 **8 天** 年假[1]。",
   citations: [
-    { index: 1, doc_id: "staff-handbook", chunk_id: "staff-handbook#0", quote: "入职第一年年假为 8 天。" },
+    {
+      index: 1,
+      doc_id: "staff-handbook",
+      chunk_id: "staff-handbook#0",
+      quote: "入职第一年年假为 8 天。",
+      text: "入职第一年年假为 8 天。",
+      source: "hybrid",
+      score: 0.66,
+      doc_title: "员工手册",
+      doc_format: "md",
+      doc_status: "indexed",
+      doc_uploaded_at: "2026-09-01T00:00:00",
+    },
   ],
   no_answer: false,
   confidence: 0.66,
@@ -28,6 +41,7 @@ const ANSWER_RESPONSE = {
 };
 
 const REFUSE_RESPONSE = {
+  qa_id: "qa-test-2",
   answer: null,
   citations: [],
   no_answer: true,
@@ -38,6 +52,7 @@ const REFUSE_RESPONSE = {
 };
 
 const CONFLICT_RESPONSE = {
+  qa_id: "qa-test-3",
   answer: "关于报销上限,两份文档口径不一致,以下并列呈现。",
   citations: [],
   no_answer: false,
@@ -119,8 +134,12 @@ describe("AskPage 回答流", () => {
     expect(screen.queryByText(/最高分/)).toBeNull();
     expect(screen.queryByText(/耗时/)).toBeNull();
     expect(screen.getByText("AI 回答")).toBeTruthy();
+    // 正文 [1] 标记渲染为可点引用 chip,依据条目展示文档标题/片段/来源/分数
+    expect(screen.getByRole("button", { name: "查看来源 [1]" })).toBeTruthy();
+    expect(screen.getByText("员工手册")).toBeTruthy();
     expect(screen.getByText(/入职第一年年假为 8 天/)).toBeTruthy();
-    expect(screen.getByText(/staff-handbook \/ staff-handbook#0/)).toBeTruthy();
+    expect(screen.getByText("相关度 0.66")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "查看原文" })).toBeTruthy();
   });
 
   it("Enter 提交,Shift+Enter 不提交", async () => {
@@ -162,6 +181,89 @@ describe("AskPage 回答流", () => {
     resolveFetch(jsonResponse(ANSWER_RESPONSE));
     expect(await screen.findByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
     expect(screen.queryByText("AI 生成中")).toBeNull();
+  });
+});
+
+describe("AskPage 重新生成与回答堆叠(FR-11)", () => {
+  it("重新生成:再次请求同一问题,新回答在上、旧回答仍可见", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ...ANSWER_RESPONSE,
+          qa_id: "qa-test-4",
+          answer: "重新生成的回答[1]。",
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    await screen.findByText(/重新生成的回答/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // 两个 AnswerSheet 并存:新回答在上(先渲染),旧回答仍可见
+    expect(screen.getAllByText("AI 回答")).toHaveLength(2);
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    // 第二次请求仍带同一问题与默认策略
+    expect(requestBody(fetchMock, 1)).toEqual({
+      query: "年假有几天?",
+      mode: "hybrid_rerank",
+    });
+  });
+
+  it("重新生成期间旧回答仍可见,加载完成后新回答在上", async () => {
+    let resolveSecond!: (response: Response) => void;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AskPage />);
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    expect(screen.getByText("AI 生成中")).toBeTruthy();
+    // 加载期间旧回答仍可见(FR-11)
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    expect(screen.getAllByText("AI 回答")).toHaveLength(1);
+
+    resolveSecond(
+      jsonResponse({
+        ...ANSWER_RESPONSE,
+        qa_id: "qa-test-5",
+        answer: "第二次回答[1]。",
+      }),
+    );
+    await screen.findByText(/第二次回答/);
+    expect(screen.queryByText("AI 生成中")).toBeNull();
+    expect(screen.getAllByText("AI 回答")).toHaveLength(2);
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+  });
+
+  it("有用:点选后 POST /api/qa/:qa_id/feedback(页面层 FR-12)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse({ qa_id: "qa-test-1", rating: "useful" }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AskPage />);
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    fireEvent.click(screen.getByRole("button", { name: "有用" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe("/api/qa/qa-test-1/feedback");
+    expect(JSON.parse(String(init.body))).toEqual({ rating: "useful" });
   });
 });
 

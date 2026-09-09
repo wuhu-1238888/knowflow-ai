@@ -6,12 +6,32 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DELETE as deleteDocument } from "@/app/api/documents/[id]/route";
 import { POST as postAsk } from "@/app/api/ask/route";
-import { ApiError, askQuestion, proxyToRag, RAG_BASE_URL } from "@/lib/rag";
+import { POST as postFeedback } from "@/app/api/qa/[id]/feedback/route";
+import {
+  ApiError,
+  askQuestion,
+  proxyToRag,
+  RAG_BASE_URL,
+  sendFeedback,
+} from "@/lib/rag";
 
 const ASK_BODY = {
+  qa_id: "qa-1",
   answer: "年假每年 10 天。",
   citations: [
-    { index: 1, doc_id: "doc-hr-05", chunk_id: "doc-hr-05-0", quote: "年假每年 10 天。" },
+    {
+      index: 1,
+      doc_id: "doc-hr-05",
+      chunk_id: "doc-hr-05-0",
+      quote: "年假每年 10 天。",
+      text: "年假每年 10 天,司龄每满一年增加 1 天。",
+      source: "hybrid",
+      score: 0.83,
+      doc_title: "员工手册",
+      doc_format: "md",
+      doc_status: "indexed",
+      doc_uploaded_at: "2026-09-01T00:00:00",
+    },
   ],
   no_answer: false,
   confidence: 0.83,
@@ -128,6 +148,40 @@ describe("其余代理路由(路径与 method 转发)", () => {
     );
     expect((mock.mock.calls[0] as [string, RequestInit])[1].method).toBe("DELETE");
   });
+
+  it("POST /api/qa/:id/feedback 转发带 id 与 rating 请求体(FR-12)", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ qa_id: "qa-1", rating: "useful" }),
+    );
+    const response = await postFeedback(
+      new Request("http://localhost:3001/api/qa/qa-1/feedback", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rating: "useful" }),
+      }),
+      { params: Promise.resolve({ id: "qa-1" }) },
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${RAG_BASE_URL}/api/qa/qa-1/feedback`);
+    expect(init.method).toBe("POST");
+    expect(
+      JSON.parse(Buffer.from(init.body as ArrayBuffer).toString()),
+    ).toEqual({ rating: "useful" });
+  });
+
+  it("POST /api/qa/:id/feedback 404:QA 记录不存在透传可读错误态", async () => {
+    stubFetch(async () => jsonResponse({ detail: "QA 记录不存在" }, 404));
+    const response = await postFeedback(
+      new Request("http://localhost:3001/api/qa/qa-ghost/feedback", {
+        method: "POST",
+        body: JSON.stringify({ rating: "useful" }),
+      }),
+      { params: Promise.resolve({ id: "qa-ghost" }) },
+    );
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "QA 记录不存在" });
+  });
 });
 
 describe("typed client askQuestion", () => {
@@ -155,5 +209,29 @@ describe("typed client askQuestion", () => {
       message: "RAG 服务不可达,请稍后重试",
     });
     await expect(askQuestion("问题")).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe("typed client sendFeedback(FR-12)", () => {
+  it("成功:POST /api/qa/:id/feedback 带 rating 请求体", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ qa_id: "qa-1", rating: "useful" }),
+    );
+    await sendFeedback("qa-1", "useful");
+    expect(mock).toHaveBeenCalledWith(
+      "/api/qa/qa-1/feedback",
+      expect.objectContaining({ method: "POST" }),
+    );
+    const init = (mock.mock.calls[0] as [string, RequestInit])[1];
+    expect(JSON.parse(String(init.body))).toEqual({ rating: "useful" });
+  });
+
+  it("失败:非 2xx 抛出 ApiError(状态码 + 可读信息)", async () => {
+    stubFetch(async () => jsonResponse({ error: "QA 记录不存在" }, 404));
+    await expect(sendFeedback("qa-9", "useless")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+      message: "QA 记录不存在",
+    });
   });
 });

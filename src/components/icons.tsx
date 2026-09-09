@@ -75,3 +75,39 @@ export function IconClose(props: SVGProps<SVGSVGElement>) {
     </Base>
   );
 }
+
+export function IconCopy(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <rect x="5.5" y="5.5" width="7" height="7.5" rx="1" />
+      <path d="M10.5 5.5V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v5.5a1 1 0 0 0 1 1h1.5" />
+    </Base>
+  );
+}
+
+export function IconRefresh(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M12.8 8a4.8 4.8 0 1 1-1.4-3.4" />
+      <path d="M13.6 2.6v2.4h-2.4" />
+    </Base>
+  );
+}
+
+export function IconThumbUp(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M3.2 7.2v7.4h2.9" />
+      <path d="M6.1 7.2V5.9a2.2 2.2 0 0 1 2.2-2.2c.5 0 .8.4.7.9l-.6 2.2h3.2c1 0 1.7 1 1.4 2l-.8 2.7a1.9 1.9 0 0 1-1.8 1.3H6.1" />
+    </Base>
+  );
+}
+
+export function IconThumbDown(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M3.2 8.8V1.4h2.9" />
+      <path d="M6.1 8.8v1.3a2.2 2.2 0 0 0 2.2 2.2c.5 0 .8-.4.7-.9l-.6-2.2h3.2c1 0 1.7-1 1.4-2l-.8-2.7a1.9 1.9 0 0 0-1.8-1.3H6.1" />
+    </Base>
+  );
+}

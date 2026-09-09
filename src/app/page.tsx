@@ -11,15 +11,15 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { ApiError, askQuestion, type AskResponse } from "@/lib/rag";
 
-/* 问答页(3.3.2 最小闭环切片):提问 → 带引用回答 / 拒答 / 冲突 / 失败,回答与依据同屏并置。
+/* 问答页(3.3.2 全量):提问 → 带引用回答 / 拒答 / 冲突 / 失败,回答与依据同屏并置。
  * 2026-09-09 人拍板:检索策略不暴露给普通用户——页面固定使用默认策略
  * Hybrid + Rerank(client 默认,与后端 /api/ask 默认一致),三模式对比见评测页。
  * 示例问题来自评测集(C01/C13/C11)。
  * C13 在 Mock 下演示双口径并列回答(冲突面板 UI 已实现,后端 conflicts 恒 null → 遗留 #1)。
- * 切片未含:双向证据联动 / SourceDrawer / 重新生成 / 有用·无用(3.3.2 全量补齐);
- * 加载态合并为「AI 生成中」胶囊(检索中 Skeleton 待流式分段后细分)。
+ * FR-11 重新生成:回答按时间倒序堆叠(最新在上),旧回答仍可见;
+ * 加载态与结果态同位不跳动,重新生成期间旧回答保留。
  * 垂直节奏(2026-09-09 人拍板):主内容顶部呼吸空间 24px(<1024px)/48px(≥1024px);
- * 页头 → 提问区与各区块间统一 24px(gap-6),加载态与结果态同位不跳动。 */
+ * 页头 → 提问区与各区块间统一 24px(gap-6)。 */
 
 const EXAMPLE_QUESTIONS = [
   { query: "年假有几天?", hint: "回答 + 引用(评测集 C01)" },
@@ -31,7 +31,8 @@ const EXAMPLE_QUESTIONS = [
 export default function AskPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AskResponse | null>(null);
+  const [results, setResults] = useState<AskResponse[]>([]);
+  const [lastQuery, setLastQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function submit(question: string) {
@@ -41,15 +42,21 @@ export default function AskPage() {
     }
     setLoading(true);
     setError(null);
-    setResult(null);
+    setLastQuery(trimmed);
     try {
-      setResult(await askQuestion(trimmed));
+      const result = await askQuestion(trimmed);
+      setResults((previous) => [result, ...previous]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "请求失败,请稍后重试");
     } finally {
       setLoading(false);
     }
   }
+
+  const latest = results[0] ?? null;
+  const answers = results.filter(
+    (item) => !item.no_answer && item.answer !== null,
+  );
 
   return (
     <div className="flex flex-col gap-6 pt-6 lg:pt-12">
@@ -88,7 +95,7 @@ export default function AskPage() {
         <ErrorCallout message={error} onRetry={() => void submit(query)} />
       ) : null}
 
-      {!loading && !error && !result ? (
+      {!loading && !error && results.length === 0 ? (
         <div className="flex flex-col gap-2">
           <p className="text-body-sm text-ink-2">试试这些问题:</p>
           <div className="flex flex-wrap gap-2">
@@ -109,14 +116,25 @@ export default function AskPage() {
         </div>
       ) : null}
 
-      {!loading && !error && result && result.no_answer ? (
+      {!loading && !error && latest && latest.no_answer ? (
         <NoAnswerCallout />
       ) : null}
 
-      {!loading && !error && result && !result.no_answer && result.answer !== null ? (
+      {answers.length > 0 ? (
         <div className="flex flex-col gap-3">
-          <AnswerSheet answer={result.answer} citations={result.citations} />
-          {result.conflicts ? <ConflictPanel conflicts={result.conflicts} /> : null}
+          {answers.map((item) => (
+            <div key={item.qa_id} className="flex flex-col gap-3">
+              <AnswerSheet
+                answer={item.answer as string}
+                citations={item.citations}
+                qaId={item.qa_id}
+                onRegenerate={() => void submit(lastQuery)}
+              />
+              {item.conflicts ? (
+                <ConflictPanel conflicts={item.conflicts} />
+              ) : null}
+            </div>
+          ))}
         </div>
       ) : null}
     </div>

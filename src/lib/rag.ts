@@ -89,6 +89,15 @@ export interface Citation {
   doc_id: string;
   chunk_id: string;
   quote: string;
+  /* 富字段(3.3.2):完整 chunk 原文 + 来源 + 展示口径分数(后端按模式计算),
+     文档元信息由 /api/ask 补齐(来源抽屉/依据条目展示;文档缺失时回退 doc_id/空串)。 */
+  text: string;
+  source: string;
+  score: number;
+  doc_title: string;
+  doc_format: string;
+  doc_status: string;
+  doc_uploaded_at: string;
 }
 
 export interface ConflictItem {
@@ -99,6 +108,7 @@ export interface ConflictItem {
 }
 
 export interface AskResponse {
+  qa_id: string;
   answer: string | null;
   citations: Citation[];
   no_answer: boolean;
@@ -107,6 +117,8 @@ export interface AskResponse {
   mode: string;
   elapsed_ms: number;
 }
+
+export type FeedbackRating = "useful" | "useless";
 
 /* ── typed client ── */
 
@@ -127,4 +139,25 @@ export async function askQuestion(
     );
   }
   return body as AskResponse;
+}
+
+/** FR-12 回答反馈:有用/无用,upsert 落库(同 QA 重复提交以最新为准)。 */
+export async function sendFeedback(
+  qaId: string,
+  rating: FeedbackRating,
+): Promise<void> {
+  const response = await fetch(`/api/qa/${encodeURIComponent(qaId)}/feedback`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ rating }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new ApiError(
+      response.status,
+      body?.error ?? "反馈提交失败,请稍后重试",
+    );
+  }
 }
