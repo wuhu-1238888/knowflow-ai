@@ -144,6 +144,22 @@ def test_citation_drops_unknown_chunk_and_rebuilds_quote():
     assert result.citations[0]["index"] == 1
     assert result.citations[0]["quote"] == "年假每年 10 天,司龄每满一年增加 1 天,上限 15 天。"
     assert result.citations[0]["quote"] in TEXT_A
+    # 富字段:完整原文 / 来源 / 展示口径分数(hybrid_rerank → rerank 分)
+    assert result.citations[0]["text"] == TEXT_A
+    assert result.citations[0]["source"] == "hybrid"
+    assert result.citations[0]["score"] == 0.8
+
+
+def test_citation_display_score_follows_mode():
+    """vector/hybrid 显示检索分,hybrid_rerank 显示 rerank 分(DesignSystem 口径)。"""
+    pipeline = AnswerPipeline(FakeProvider([valid_draft()]))
+    # 分数须高于 vector 阈值(τ=0.58),否则 vector 模式拒答、引用为空
+    hits = [hit("doc-a", score=0.65, rerank_score=0.9)]
+    assert pipeline.answer("问题", hits, mode="vector").citations[0]["score"] == 0.65
+    assert pipeline.answer("问题", hits, mode="hybrid").citations[0]["score"] == 0.65
+    assert (
+        pipeline.answer("问题", hits, mode="hybrid_rerank").citations[0]["score"] == 0.9
+    )
 
 
 def test_citation_dedup_keeps_first():

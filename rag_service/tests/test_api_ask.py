@@ -64,18 +64,54 @@ def test_ask_success_full_schema(tmp_path):
     assert body["conflicts"] is None
     assert body["mode"] == "hybrid_rerank"
     assert isinstance(body["elapsed_ms"], int)
+    # qa_id 随响应返回(FR-12 反馈关联),与 QA 日志 id 一致
+    assert body["qa_id"].startswith("qa-")
     assert len(body["citations"]) == 1
     citation = body["citations"][0]
-    assert set(citation) == {"index", "doc_id", "chunk_id", "quote"}
+    assert set(citation) == {
+        "index", "doc_id", "chunk_id", "quote",
+        "text", "source", "score",
+        "doc_title", "doc_format", "doc_status", "doc_uploaded_at",
+    }
     assert citation["doc_id"] == "doc-hr-05" and citation["chunk_id"] == "doc-hr-05-0"
     assert citation["quote"] in TEXT_HR05
+    # 富字段:完整 chunk 原文 + 来源 + 展示口径分数(hybrid_rerank → rerank 分)
+    assert citation["text"] == TEXT_HR05
+    assert citation["source"] == "hybrid"
+    assert citation["score"] == 0.83
+    # 仓库无该文档 → 元信息回退 doc_id / 空串
+    assert citation["doc_title"] == "doc-hr-05"
+    assert citation["doc_format"] == "" and citation["doc_status"] == ""
     # QA 日志落库
     logs = repo.list_qa_logs()
     assert len(logs) == 1
+    assert logs[0]["id"] == body["qa_id"]
     assert logs[0]["query"] == "年假有几天?"
     assert logs[0]["no_answer"] == 0
     assert logs[0]["mode"] == "hybrid_rerank"
     assert json.loads(logs[0]["citations_json"]) == body["citations"]
+
+
+def test_ask_enriches_citation_with_document_metadata(tmp_path):
+    """文档已入仓库时,引用附带 title/format/status/uploaded_at(来源抽屉元信息)。"""
+    client, repo = make_client(tmp_path)
+    repo.upsert_document(
+        {
+            "id": "doc-hr-05",
+            "title": "员工手册",
+            "file_type": "md",
+            "status": "indexed",
+            "uploaded_at": "2026-09-01T00:00:00",
+            "source_path": "demo/doc-hr-05.md",
+            "synthetic": 1,
+        }
+    )
+    resp = client.post("/api/ask", json={"query": "年假有几天?", "mode": "hybrid_rerank"})
+    citation = resp.json()["citations"][0]
+    assert citation["doc_title"] == "员工手册"
+    assert citation["doc_format"] == "md"
+    assert citation["doc_status"] == "indexed"
+    assert citation["doc_uploaded_at"] == "2026-09-01T00:00:00"
 
 
 def test_ask_default_mode_is_hybrid_rerank(tmp_path):

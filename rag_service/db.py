@@ -1,6 +1,6 @@
 """SQLite 元数据库:建表与连接。
 
-五实体(Document/Chunk/EvaluationCase/EvaluationRun/QALog)字段照
+六实体(Document/Chunk/EvaluationCase/EvaluationRun/QALog/QAFeedback)字段照
 memory-bank/technical-design.md 数据模型;**不建**租户/角色字段。
 向量与倒排索引由 LanceDB 管理,不建独立表(仅初始化 runtime/lancedb 目录)。
 """
@@ -59,6 +59,13 @@ CREATE TABLE IF NOT EXISTS qa_logs (
   citations_json TEXT NOT NULL DEFAULT '[]',
   no_answer INTEGER NOT NULL DEFAULT 0,
   mode TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS qa_feedback (
+  qa_id TEXT PRIMARY KEY,
+  rating TEXT NOT NULL
+    CHECK (rating IN ('useful', 'useless')),
   created_at TEXT NOT NULL
 );
 """

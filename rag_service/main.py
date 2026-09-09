@@ -11,6 +11,7 @@ ask 30s 上限 = LLM 调用超时(真实 provider 骨架实现时生效);本地�
 
 import json
 import time
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -26,6 +27,10 @@ from .retrieval import BgeReranker, RetrievalService, TOP_K
 class AskRequest(BaseModel):
     query: str = Field(min_length=1, max_length=500)
     mode: str = "hybrid_rerank"
+
+
+class FeedbackRequest(BaseModel):
+    rating: Literal["useful", "useless"]
 
 
 def create_app(service=None, pipeline=None, repo=None) -> FastAPI:
@@ -92,27 +97,51 @@ def create_app(service=None, pipeline=None, repo=None) -> FastAPI:
             ) from exc
         result = _pipeline().answer(query, hits, req.mode)
         elapsed_ms = round((time.monotonic() - started) * 1000)
-        # 审计最小落点:QA 日志全字段落库(含拒答/降级)
+        # 引用富数据:附加文档元信息(来源抽屉/依据条目展示;文档缺失时回退 doc_id)
+        citations = []
+        for c in result.citations:
+            meta = _repo().get_document(c["doc_id"])
+            citations.append(
+                {
+                    **c,
+                    "doc_title": meta["title"] if meta else c["doc_id"],
+                    "doc_format": meta["file_type"] if meta else "",
+                    "doc_status": meta["status"] if meta else "",
+                    "doc_uploaded_at": meta["uploaded_at"] if meta else "",
+                }
+            )
+        qa_id = new_id("qa-")
+        # 审计最小落点:QA 日志全字段落库(含拒答/降级);qa_id 随响应返回供反馈关联(FR-12)
         _repo().add_qa_log(
             {
-                "id": new_id("qa-"),
+                "id": qa_id,
                 "query": query,
                 "answer": result.answer,
-                "citations_json": json.dumps(result.citations, ensure_ascii=False),
+                "citations_json": json.dumps(citations, ensure_ascii=False),
                 "no_answer": 1 if result.no_answer else 0,
                 "mode": req.mode,
                 "created_at": now_iso(),
             }
         )
         return {
+            "qa_id": qa_id,
             "answer": result.answer,
-            "citations": result.citations,
+            "citations": citations,
             "no_answer": result.no_answer,
             "confidence": result.confidence,
             "conflicts": result.conflicts,
             "mode": req.mode,
             "elapsed_ms": elapsed_ms,
         }
+
+    @app.post("/api/qa/{qa_id}/feedback")
+    def feedback(qa_id: str, req: FeedbackRequest) -> dict:
+        """FR-12 回答反馈:有用/无用,upsert 落库;QA 不存在 → 404。"""
+        repo = _repo()
+        if not repo.qa_exists(qa_id):
+            raise HTTPException(status_code=404, detail="QA 记录不存在")
+        repo.set_feedback(qa_id, req.rating, now_iso())
+        return {"qa_id": qa_id, "rating": req.rating}
 
     return app
 

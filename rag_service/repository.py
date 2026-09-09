@@ -184,3 +184,30 @@ class Repository:
                 "SELECT * FROM qa_logs ORDER BY created_at DESC, id LIMIT ?", (limit,)
             ).fetchall()
         return [dict(r) for r in rows]
+
+    # ── QAFeedback(FR-12:有用/无用,记录并落库) ──
+
+    def qa_exists(self, qa_id: str) -> bool:
+        with self._conn() as conn:
+            return (
+                conn.execute("SELECT 1 FROM qa_logs WHERE id = ?", (qa_id,)).fetchone()
+                is not None
+            )
+
+    def set_feedback(self, qa_id: str, rating: str, created_at: str) -> None:
+        """反馈 upsert:同一 QA 重复提交 = 覆盖(INSERT OR REPLACE,幂等)。"""
+        with self._conn() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO qa_feedback (qa_id, rating, created_at)
+                VALUES (:qa_id, :rating, :created_at)
+                """,
+                {"qa_id": qa_id, "rating": rating, "created_at": created_at},
+            )
+
+    def get_feedback(self, qa_id: str) -> str | None:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT rating FROM qa_feedback WHERE qa_id = ?", (qa_id,)
+            ).fetchone()
+        return row[0] if row else None

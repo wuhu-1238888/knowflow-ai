@@ -60,6 +60,13 @@ def tau_for(mode: str) -> float:
     return TAU_RERANK if mode == "hybrid_rerank" else TAU_VECTOR
 
 
+def display_score(hit: SearchHit, mode: str) -> float:
+    """引用/抽屉展示口径:hybrid_rerank 显示 rerank 分,其余显示检索分。"""
+    if mode == "hybrid_rerank" and hit.rerank_score is not None:
+        return hit.rerank_score
+    return hit.score
+
+
 def build_context(hits: list[SearchHit]) -> list[RetrievedChunk]:
     """context 组装:top-k 截断 + 字符预算(约 3000 token)。"""
     chunks: list[RetrievedChunk] = []
@@ -118,7 +125,7 @@ class AnswerPipeline:
             )
         return AnswerResult(
             answer=draft.answer,
-            citations=self._map_citations(draft, hits),
+            citations=self._map_citations(draft, hits, mode),
             no_answer=False,
             confidence=confidence,
             conflicts=self._map_conflicts(draft, hits),
@@ -160,9 +167,11 @@ class AnswerPipeline:
     # ── 规则侧引用/冲突校验 ──
 
     @staticmethod
-    def _map_citations(draft: AnswerDraft, hits: list[SearchHit]) -> list[dict]:
+    def _map_citations(draft: AnswerDraft, hits: list[SearchHit], mode: str) -> list[dict]:
         """引用重建:丢弃非本次检索 chunk 的引用与重复引用;编号按被摘用顺序;
-        quote 一律规则侧摘录(必为 chunk 原文子串,前端高亮可精确匹配)。"""
+        quote 一律规则侧摘录(必为 chunk 原文子串,前端高亮可精确匹配)。
+        附带 text(完整 chunk 原文,供来源抽屉)/ source / score(展示口径:
+        hybrid_rerank 显示 rerank 分,其余显示检索分,DesignSystem EvidenceItem)。"""
         by_chunk = {h.chunk_id: h for h in hits}
         out: list[dict] = []
         seen: set[str] = set()
@@ -178,6 +187,9 @@ class AnswerPipeline:
                     "doc_id": hit.doc_id,
                     "chunk_id": hit.chunk_id,
                     "quote": extract_sentence(hit.text),
+                    "text": hit.text,
+                    "source": hit.source,
+                    "score": display_score(hit, mode),
                 }
             )
             index += 1

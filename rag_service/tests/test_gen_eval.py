@@ -135,7 +135,11 @@ def test_run_records_full_fields():
     assert entry["no_answer"] is False
     assert entry["answer"] == "年假 10 天,上限 15 天。"
     assert entry["citations"] == [
-        {"index": 1, "doc_id": "doc-a", "chunk_id": "doc-a-0", "quote": "doc-a 正文:年假 10 天。"}
+        {
+            "index": 1, "doc_id": "doc-a", "chunk_id": "doc-a-0",
+            "quote": "doc-a 正文:年假 10 天。",
+            "text": "doc-a 正文:年假 10 天。", "source": "hybrid", "score": 0.8,
+        }
     ]
     assert entry["hits"][0]["vec_score"] == 0.7
     pre = entry["point_precheck"]
