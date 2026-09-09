@@ -4,7 +4,7 @@
 > 对应:执行期持续维护(执行日志)
 
 <!-- 头部:测试基线,随任务更新 -->
-- 测试基线:后端 pytest 127/127 + 前端 vitest 59/59(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏后全绿,2026-09-09)
+- 测试基线:后端 pytest 132/132 + 前端 vitest 79/79(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏 + 3.3.2 全量交互补齐后全绿,2026-09-09)
 
 ## Round 1:Stage 01–08 文档阶段完成表
 
@@ -97,6 +97,7 @@
 | 3.3.4(提前切片) | 评测页检索策略对比 + 选型叙事 | 已完成(三模式对比表:实测 Hit@5/MRR + 未实现指标显式「暂无数据」;L3 测试 4 例) | (见下) |
 | 布局修订 | 页面容器宽度分档 + 问答页克制副标题 | 已完成(2026-09-09 人拍板「宽幅居中 + max-width 封顶」;前端 vitest 58/58 绿) | (见下) |
 | 布局修订 2 | 问答页垂直节奏(顶部呼吸空间 + 区块间距统一) | 已完成(2026-09-09 人拍板;前端 vitest 59/59 绿) | (见下) |
+| 3.3.2 全量 | 引用 chip / 双向证据联动 / 来源抽屉 / 重新生成 / 有用·无用(FR-11/FR-12) | 已完成(后端 pytest 132/132 + 前端 vitest 79/79 绿;typecheck 干净) | (见下) |
 
 ### M3 首批任务记录(2026-09-09,依据人「继续下一步吧」启动)
 
@@ -128,6 +129,14 @@
 - **实施**:page.tsx 根容器 `gap-4` → `gap-6 pt-6 lg:pt-12`;加载块去 `py-6`;全部使用既有 spacing token(s6/s12,即 Tailwind 4px 网格),未新增 token、未新增组件。
 - **测试**:前端 vitest 59/59(新增垂直节奏断言 1)、typecheck 干净;SSR 实测类名生效。
 - **附带修复**:vitest 缓存目录与 Next dev server 的 `node_modules/.vite` 冲突(反复出现 "Vitest failed to find the current suite")→ vitest.config.ts 设 Vite `cacheDir: node_modules/.vitest` 分离,双连跑验证稳定。
+
+### 3.3.2 全量交互补齐记录(2026-09-09)
+
+- **后端(引用富数据 + 反馈)**:`_map_citations` 附 `text`(完整 chunk 原文,供来源抽屉)/`source`/`score`(展示口径:hybrid_rerank 显示 rerank 分,其余显示检索分,DesignSystem EvidenceItem 口径);`/api/ask` 响应增加 `qa_id` 并逐引用补齐文档元信息(`doc_title/doc_format/doc_status/doc_uploaded_at`,文档缺失回退 doc_id/空串);新增 `POST /api/qa/{qa_id}/feedback`(FR-12:rating ∈ useful/useless,upsert 落库 qa_feedback 表,QA 不存在 404)。测试:test_api_feedback 3 例新建,test_api_ask/test_answer_pipeline/test_gen_eval 更新至富字段口径,后端 pytest 132/132。
+- **前端(3.3.2 全量组件)**:CitationChip(`[n]` mono chip,悬停/聚焦反色,缺失编号灰态 + title 提示,热区 移动端 44/桌面 32);EvidenceItem(编号 chip·文档标题·格式/上传时间·引用片段 evidence-quote 4 行可展开·来源徽标·相关度 mono 2 位·查看原文);SourceDrawer(360px 右滑入 motion.medium 200ms + 遮罩 overlay-light,标题 20px/600,格式·状态·上传时间徽标,完整 chunk 原文可滚动,分数+来源模式,「在文档库中查看」链接,Esc/遮罩关闭);AnswerSheet 重写(正文 `[n]` 标记解析为内嵌 chip,双向联动:悬停 chip ↔ 引用句 brand-50 高亮 ↔ 依据条目 brand-600 描边 + 滚动进入视口,操作行 重新生成 secondary/复制/有用·无用 ghost);问答页回答栈(FR-11:重新生成期间旧回答仍可见,新回答在上)。
+- **已知取舍(不隐瞒)**:① Mock Provider 逐字摘录不带 [n] 编号 → 实测页面无内嵌 chip、双向联动暂不可手测(L3 组件测试以固定夹具覆盖,真实 LLM 到位后自然呈现,qa-guide v0.5 已注明);②反馈提交失败静默回退,暂无 Toast 提示组件;③「在文档库中查看」暂链向 /documents 页(文档定位跳转随 3.3.3 文档库页实现)。
+- **测试**:后端 pytest 132/132;前端 vitest 79/79(新增:rag.test 反馈 BFF 转发 2 + sendFeedback client 2、answer-sheet.test 全量重写 17、page.test 回答堆叠/加载保留/页面反馈 3);typecheck 干净。L4 走查待人操作(qa-guide v0.5)。
+- **下一步**:3.3.3 文档库页 → 3.3.4 评测页全量(运行按钮/运行历史/动态数据)→ 3.3.5 关于页。
 
 ## 修订
 
