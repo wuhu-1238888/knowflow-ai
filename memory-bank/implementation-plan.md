@@ -109,7 +109,7 @@
 - 验证:L1 Mock 输出 schema 单测 + 同输入同输出(确定性)断言
 - 产出物:llm_adapter.py、mock_provider.py、deepseek_provider.py(骨架)、测试
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit `afee029`)。** 交付:llm_adapter.py(AnswerDraft/RetrievedChunk/Citation/Conflict dataclass + LLMProvider Protocol + get_provider 工厂)、mock_provider.py(规则摘句:前 3 块各取首完整句 ≤120 字符,引用编号=被摘用顺序,确定性)、deepseek_provider.py(同接口骨架,Key 只读 .env,真实调用待遗留 #1)、测试 7 例(确定性/schema/编号/截断/空输入/跳过空块/工厂),pytest 28/28 绿。偏差记录:①引用编号初版用输入枚举序号,空块被跳过后编号不连续——修正为「被摘用顺序」编号(契约:index=回答中引用序号);②conflicts 恒 None(Mock 不伪造冲突标注,3.2.6 管线规则侧处理)。
 
 ### 任务 3.2.2 ParsingService(5 格式解析)
 - 做什么:PyMuPDF(pdf)+ python-docx(docx)+ 规则清洗(md/html/txt);提取标题与纯文本,表格降级为文本流,禁 OCR;空文本拒绝并提示;首先生成固定 5 格式解析夹具(PDF/DOCX 各 1 篇由现有 md 文档生成,synthetic 标注保留)——**夹具固定内容固定日期**

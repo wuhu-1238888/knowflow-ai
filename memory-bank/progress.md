@@ -49,6 +49,17 @@
 - **Blocker**:无。**遗留**:#5(npm audit postcss 2 advisories,修复需升 next@16,待人选型裁决)继续挂账;#1/#3/#4 维持原状。
 - **退出条件**:**带遗留通过**(2026-09-09 人拍板)→ 进入 M2。
 
+## Round 4:Stage 11 编码(M2 纵向核心链路)
+
+| 任务 | 内容 | 状态 | commit |
+| --- | --- | --- | --- |
+| 3.2.1 | LLM 适配层 + Mock Provider | 已完成(pytest 28/28 绿;Mock 确定性输出与 AnswerDraft 契约断言通过) | `afee029` |
+| 3.2.2 | ParsingService(5 格式解析) | 未开始 | — |
+| 3.2.3 | IndexingService | 未开始 | — |
+| 3.2.4 | RetrievalService | 未开始 | — |
+| 3.2.5 | EvaluationEngine | 未开始 | — |
+| 3.2.6 | AnswerPipeline + /api/ask | 未开始 | — |
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->
