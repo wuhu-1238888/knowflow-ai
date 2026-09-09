@@ -6,6 +6,7 @@
 
 from pathlib import Path
 
+from .chunker import chunk_text
 from .config import DEMO_DOCS_DIR
 from .db import init_db
 from .indexing import BgeM3Embedder, LanceIndex
@@ -39,6 +40,21 @@ def index_demo_docs(docs_dir: Path | None = None) -> dict:
             continue
         count = index.index_document(result.doc_id, result.text)
         summary[result.doc_id] = count
+        # chunks 落元数据库(3.3.3:文档表格「分块数」从 SQLite 读,避免页面加载向量库);
+        # 先删后插保证重跑幂等(FR-02)
+        repo.delete_chunks(result.doc_id)
+        repo.add_chunks(
+            [
+                {
+                    "id": f"{result.doc_id}-{c.order}",
+                    "doc_id": result.doc_id,
+                    "text": c.text,
+                    "chunk_order": c.order,
+                    "metadata": "{}",
+                }
+                for c in chunk_text(result.text)
+            ]
+        )
         # 状态回写:indexed(其余元数据字段保留原值)
         existing = repo.get_document(result.doc_id)
         repo.upsert_document(

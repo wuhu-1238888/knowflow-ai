@@ -150,6 +150,11 @@ class LanceIndex:
         table.add(rows)
         return len(rows)
 
+    def delete_document(self, doc_id: str) -> None:
+        """删除该文档全部向量行(幂等);元数据删除由 Repository 负责。"""
+        table = self._ensure_table()
+        table.delete(f"doc_id = '{_quote(doc_id)}'")
+
     def count_chunks(self, doc_id: str | None = None) -> int:
         table = self._ensure_table()
         df = table.to_pandas()

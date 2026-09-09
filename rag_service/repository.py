@@ -35,13 +35,24 @@ class Repository:
     # ── Document ──
 
     def upsert_document(self, doc: dict) -> None:
-        """幂等写入文档元数据(固定 id 重复装载 = 覆盖)。"""
+        """幂等写入文档元数据(固定 id 重复装载 = 覆盖)。
+
+        用 ON CONFLICT DO UPDATE 而非 INSERT OR REPLACE:后者内部先删父行再插入,
+        在 foreign_keys=ON 下触发 chunks 级联删除(状态回写会清空已写 chunks)。
+        """
         with self._conn() as conn:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO documents
+                INSERT INTO documents
                   (id, title, file_type, status, uploaded_at, source_path, synthetic)
                 VALUES (:id, :title, :file_type, :status, :uploaded_at, :source_path, :synthetic)
+                ON CONFLICT(id) DO UPDATE SET
+                  title = excluded.title,
+                  file_type = excluded.file_type,
+                  status = excluded.status,
+                  uploaded_at = excluded.uploaded_at,
+                  source_path = excluded.source_path,
+                  synthetic = excluded.synthetic
                 """,
                 doc,
             )
@@ -102,6 +113,11 @@ class Repository:
                 (doc_id,),
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def delete_chunks(self, doc_id: str) -> None:
+        """删除文档全部 chunk 行(重建索引前调用,保证幂等不重复)。"""
+        with self._conn() as conn:
+            conn.execute("DELETE FROM chunks WHERE doc_id = ?", (doc_id,))
 
     def count_chunks(self, doc_id: str) -> int:
         with self._conn() as conn:

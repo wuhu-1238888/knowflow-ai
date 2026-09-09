@@ -35,10 +35,16 @@ def get_models_dir() -> Path:
     return get_runtime_dir() / "models"
 
 
+def get_uploads_dir() -> Path:
+    """用户上传的源文件保存目录(重建索引时重新读取);runtime/ 不入库。"""
+    return get_runtime_dir() / "uploads"
+
+
 def ensure_runtime_dirs() -> None:
     get_runtime_dir().mkdir(parents=True, exist_ok=True)
     get_lancedb_dir().mkdir(parents=True, exist_ok=True)
     get_models_dir().mkdir(parents=True, exist_ok=True)
+    get_uploads_dir().mkdir(parents=True, exist_ok=True)
 
 
 # 文档状态机(Stage 08 技术设计三态;UI 四态在 3.3.3 前端映射:
