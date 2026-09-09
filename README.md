@@ -48,6 +48,6 @@ knowflow-ai/
 
 ## 说明
 
-- 模型首次运行自动下载至 `runtime/models/`(数 GB,需联网一次)。
+- 模型首次运行自动下载至 `runtime/models/`(数 GB,需联网一次);huggingface.co 被墙的环境,可设 `HF_ENDPOINT` 走镜像,或将模型经 ModelScope 等通道预置到 `runtime/models/BAAI/bge-m3`(代码检测到本地目录即零网络加载)。
 - API Key 只走 `.env`,不入库;服务本地绑定,无鉴权,仅用于本地演示。
 - 评测数值只来自 `docs/eval-results/` 的实测 run JSON,禁止虚构。

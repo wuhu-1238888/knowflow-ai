@@ -30,9 +30,15 @@ def get_lancedb_dir() -> Path:
     return get_runtime_dir() / "lancedb"
 
 
+def get_models_dir() -> Path:
+    """本地模型目录(bge-m3/bge-reranker-v2-m3 首次运行下载至此)。"""
+    return get_runtime_dir() / "models"
+
+
 def ensure_runtime_dirs() -> None:
     get_runtime_dir().mkdir(parents=True, exist_ok=True)
     get_lancedb_dir().mkdir(parents=True, exist_ok=True)
+    get_models_dir().mkdir(parents=True, exist_ok=True)
 
 
 # 文档状态机(Stage 08 技术设计三态;UI 四态在 3.3.3 前端映射:
