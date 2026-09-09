@@ -125,7 +125,7 @@
 - 验证:L1 分块单测(短文档/超长段落/空文本/顺序字段);L2 索引后 doc 数=20、每篇 chunk>0、幂等断言;**返工预算:LanceDB 不满足则启用备选 Chroma+SQLite FTS5**
 - 产出物:indexing.py、chunker.py、CLI、测试
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit `fc0e736`)。** 交付:chunker.py(标题开新块+段落累积,上限 1000/重叠 100 常量,超长块滑动窗口强制切分)、indexing.py(Embedder Protocol 可插拔;Md5Embedder 确定性测试替身;BgeM3Embedder 本地目录优先/HF 兜底;LanceIndex 幂等写 chunks 表+text 列 FTS 倒排)、index_docs.py(批量索引 CLI,状态回写 indexed)、测试 14 例(chunker 7 + indexing 7),pytest 54/54 绿。L2 实测:20 篇 72 chunks,重跑幂等不翻倍,元数据库 20/20 indexed。偏差记录:①huggingface.co 本机网络不可达且 hf-mirror 当前 308 回源,模型经 ModelScope 一次性预置到 runtime/models/BAAI/bge-m3(预置脚本用完即删),BgeM3Embedder 检测本地目录存在即零网络加载,HF 自动下载路径保留(README/.env.example 已记录);②重叠仅作用于超长块滑动窗口,段落自然边界切分不重叠;③lancedb 0.25 起弃用 create_fts_index,改用 create_index(text, config=FTS());④CLI 层无单测(与 seed 同类口径),Repository 构造参数误用由 L2 真实运行暴露并修复。
 
 ### 任务 3.2.4 RetrievalService(三模式检索 + Rerank)
 - 做什么:vector(LanceDB 余弦)/ BM25(全文)/ RRF 融合 / bge-reranker-v2-m3 重排;三模式 vector / hybrid / hybrid_rerank;输出 `{chunks:[{chunk_id, doc_id, score, rerank_score?, source}]}`(source ∈ vector|keyword|hybrid);top_k=8、RRF k 值等为常量;空索引返回空列表(触发拒答链路);**数据权限边界:仅检索本知识库索引,禁止跨索引**

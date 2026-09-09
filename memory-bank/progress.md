@@ -55,7 +55,7 @@
 | --- | --- | --- | --- |
 | 3.2.1 | LLM 适配层 + Mock Provider | 已完成(pytest 28/28 绿;Mock 确定性输出与 AnswerDraft 契约断言通过) | `afee029` |
 | 3.2.2 | ParsingService(5 格式解析) | 已完成(pytest 40/40 绿;5 格式夹具断言+边界 12 例;20 篇演示文档全量可解析) | `eae4e75` |
-| 3.2.3 | IndexingService | 未开始 | — |
+| 3.2.3 | IndexingService | 已完成(pytest 54/54 绿;L2 实测 20 篇 72 chunks、重跑幂等、20/20 indexed) | `fc0e736` |
 | 3.2.4 | RetrievalService | 未开始 | — |
 | 3.2.5 | EvaluationEngine | 未开始 | — |
 | 3.2.6 | AnswerPipeline + /api/ask | 未开始 | — |
