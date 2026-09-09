@@ -159,7 +159,7 @@
 - 验证:L2 直连:成功 + 404 + 422 + 服务不可达(前端给出可读错误态)
 - 产出物:API routes、client、错误态约定
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(前端首批交付,commit 见 progress Round 5)。** 交付:src/lib/rag.ts(RAG_BASE_URL=127.0.0.1:8000、RAG_TIMEOUT_MS=120s、proxyToRag 错误码透传+统一可读错误态 {error}、FastAPI {"detail":string|数组} 扁平化、ApiError、typed client askQuestion POST /api/ask)、6 条 API route(api/ask、api/ingest、api/documents、api/documents/[id] DELETE、api/eval/run、api/eval/runs;ingest/documents/eval 的后端端点在 3.3.3/3.3.4 落地,当前透传后端 404)、rag.test.ts 8 例(成功透传/404/422 数组/网络失败→503/超时→504/DELETE 转发/client 成功与 ApiError)。偏差记录:①BFF 同源代理(Next 3001 → 8000)消除浏览器 CORS,后端地址仅存于 route 层;②RAG_TIMEOUT_MS=120s > 后端 30s 建议(ask 首次调用含模型加载实测约 90s,30s 会误伤首问);③网络失败/超时的可读文案由 route 层统一,浏览器自身网络异常由 client 抛 ApiError 通用文案。
 
 ### 任务 3.3.2 问答页(核心 UI)
 - 做什么:提问区(AskTextarea + Enter 提交 + `/` 聚焦 + QuestionChip 示例问题,来自评测集)+ 检索模式分段切换(默认混合+重排);**AnswerSheet 全套**:元信息行(模式徽标·依据数·最高分·耗时,全 mono)→ AI 回答(眉题渐变点 + 正文 + CitationChip)→ 依据带(EvidenceItem:文档标题/章节/引用片段/来源徽标/分数/查看原文)→ 操作行(重新生成/复制/有用·无用);**双向证据联动**(chip↔引用句↔依据条目);SourceDrawer(完整 chunk 原文 + 元信息 + 分数);NoAnswerCallout(中性灰 + 检索证据行「最高分·阈值·依据 0 条」);ConflictPanel(琥珀徽标 + 等宽等权双卡);生成中态 = 渐变胶囊
@@ -167,7 +167,7 @@
 - 验证:L3 组件测试:CitationChip 渲染/灰态/联动、拒答卡中性灰、冲突双卡等权、模式切换;L4 走查:DesignRules 问答页规则逐条 + 375px 无溢出;FR-11 重新生成(旧回答仍可见)
 - 产出物:问答页、AI 组件库、测试
 
-**状态:未开始。**
+**状态:2026-09-09 最小闭环切片完成,全量交互待续(commit 见 progress Round 5)。** 交付(切片):问答页 src/app/page.tsx(状态机 idle/loading/done;必备区块:页头+Segmented 三模式切换默认混合+重排 → 提问区 AskTextarea + primary 提问 + 3 个评测集示例 chip → 结果区 AnswerSheet/NoAnswerCallout/ConflictPanel 三选一,错误态 ErrorCallout 带重试;加载态 =「AI 生成中」渐变胶囊(shimmer,白名单第 3 处);Enter 提交 / Shift+Enter 换行 / `/` 聚焦);组件 6 个(segmented / ask-textarea / answer-sheet(含 formatAnswer 轻量清洗)/ no-answer-callout / conflict-panel / error-callout);theme.css 增 --animate-shimmer;L3 测试 12 例(page.test.tsx 状态机 8 + answer-sheet.test.tsx 4),前端 vitest 44/44 绿、typecheck 干净。L2 实测(BFF 链路):年假 → 200 答案+3 引用(0.8336);拒答 → no_answer(0.0015);交通费 → 双口径并列回答(0.9930)。偏差记录:①任务定义全量(双向证据联动/CitationChip/SourceDrawer/操作行完整版/QuestionChip/生成中细分态)→ 按人指令先做最小闭环切片,全量项继续推进;②示例 chip 用 Button secondary 而非独立 QuestionChip 组件(全量时替换);③C13 示例在 Mock 下 conflicts 恒 null(mock_provider 设计),点击演示双口径并列回答而非冲突面板——面板 UI 已实现并经 L3 覆盖,真实验收归遗留 #1;④回答 markdown 轻量清洗,真实 provider 富文本渲染后续决定。
 
 ### 任务 3.3.3 文档库页(上传/列表/管理)
 - 做什么:UploadZone(5 格式校验/拖拽/无 OCR 说明);文档表格(标题/格式徽标/状态徽标 4 态/分块数/上传时间/操作);删除 = danger 确认模态(二次确认);重建索引;上传中行内进度
