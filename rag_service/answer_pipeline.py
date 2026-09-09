@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ── 拒答阈值(改动须人拍板;校准依据 docs/eval-results/tau-calibration.md)──
 TAU_RERANK = 0.30  # hybrid_rerank:rerank_score 口径(Stage 10 拍板初值,实测校准维持)
-TAU_VECTOR = 0.58  # vector / hybrid:向量余弦口径(实测校准建议值,待人拍板)
+TAU_VECTOR = 0.58  # vector / hybrid:向量余弦口径(2026-09-09 人拍板采纳,窗口 0.052 风险已披露)
 
 CONTEXT_TOP_K = 3  # 进入 LLM 的最大 chunk 数
 CONTEXT_MAX_CHARS = 4500  # token 预算约 3000(中文 1 token ≈ 1.5 字符近似)
