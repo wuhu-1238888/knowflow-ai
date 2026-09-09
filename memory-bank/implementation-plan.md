@@ -141,7 +141,7 @@
 - 验证:L1 指标计算手算用例对照(Hit@5/MRR 各 ≥3 个手算例);L5 全量 12 例 × 3 模式一次,输出指标矩阵;**M2a 验收:Hybrid+Rerank Hit@5 ≥ 11/12 且 MRR ≥ 0.8(实测 run JSON,人复核)**
 - 产出物:eval_engine.py、metrics.py、run-*.json、指标矩阵
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit `1ebfa52`,run 产物 `b013b2f`)。** 交付:metrics.py(Hit@5/MRR 纯函数)、eval_engine.py(compute_params_hash 冻结分块/检索常量+模型概要、get_doc_commit 锁定文档集 commit、run_mode 单例失败记 skipped 不中断、save_run/save_matrix/record_run、CLI)、测试 22 例(metrics 12 + engine 10),pytest 92/92 绿。L5 实测两轮(FR-08 可复现:逐例排名/hit 列表/指标/params_hash 两轮完全一致):**vector 12/12 MRR 0.9583;hybrid 12/12 MRR 0.9028;hybrid_rerank 12/12 MRR 0.9583**——**M2a 达标线通过:Hit@5 12/12 ≥ 11/12、MRR 0.9583 ≥ 0.8**(run JSON 在 docs/eval-results/,待人复核)。偏差记录:①14 例全部入 run JSON(拒答 2 例仅记录检索分数分布供 3.2.6 τ 校准,不参与命中指标——evaluation-plan「12 例」指命中指标口径);②skipped 例排除在指标分母外(无排名数据,由 skipped 字段单独暴露,避免漏算拉低或漏算拉高);③hybrid_rerank 单例 CPU 重排约 17s、全量单模式约 4 分钟,demo 规模可接受不优化(记录)。
 
 ### 任务 3.2.6 AnswerPipeline + /api/ask + QA 日志(M2b)
 - 做什么:context 组装(top-k 截断 + token 预算约 3000);LLM 生成;citation 规则侧编号映射(**绝不信模型自报来源**,映射失败即该引用灰态);拒答判定 = 规则阈值(检索最高分 < τ,τ 初值建议 0.30,3.2.4 实测分数分布校准后报人拍板);conflicts 字段 LLM 标注 + 规则校验(只认可合法 chunk 引用)并并列呈现;schema 校验失败重试 1 次→仍失败按拒答处理并留日志;QA 日志全字段落库(审计最小落点);FastAPI POST /api/ask(非流式 JSON,30s 超时,错误码按 Stage 08)
