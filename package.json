@@ -4,9 +4,9 @@
   "private": true,
   "description": "KnowFlow AI 企业 AI 知识助手(RAG 作品集项目,演示数据为虚构企业 NovaTech)",
   "scripts": {
-    "dev": "concurrently -k -n web,rag -c blue,magenta \"next dev\" \"python -m uvicorn rag_service.main:app --host 127.0.0.1 --port 8000\"",
+    "dev": "concurrently -k -n web,rag -c blue,magenta \"next dev -p 3001\" \"python -m uvicorn rag_service.main:app --host 127.0.0.1 --port 8000\"",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

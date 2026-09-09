@@ -29,7 +29,7 @@ copy .env.example .env
 npm run dev
 ```
 
-- 前端:http://localhost:3000
+- 前端:http://localhost:3001(端口固定;被占用时明确报错,不自动切换)
 - RAG 服务:http://127.0.0.1:8000(健康检查:`curl http://127.0.0.1:8000/health`)
 
 **工作纪律**:只跑一个 dev server(`npm run dev` = 一套环境);build 必须在无 dev server 时执行。
