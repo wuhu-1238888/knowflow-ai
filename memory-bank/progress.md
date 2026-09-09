@@ -60,6 +60,13 @@
 | 3.2.5 | EvaluationEngine | 已完成(pytest 92/92 绿;L5 两轮实测:hybrid_rerank Hit@5 12/12、MRR 0.9583 → **M2a 达标**;FR-08 两轮逐例一致) | `1ebfa52`(run 产物 `b013b2f`) |
 | 3.2.6 | AnswerPipeline + /api/ask | 未开始 | — |
 
+### M2a 验收记录(2026-09-09,拍板人:王荟茹)
+
+- **实测(两轮,FR-08 逐例排名/hit 列表/指标/params_hash 完全一致)**:vector 12/12 MRR 0.9583;hybrid 12/12 MRR 0.9028;**hybrid_rerank 12/12 MRR 0.9583**。
+- **达标线核对**:Hit@5 12/12 ≥ 11/12 ✓;MRR 0.9583 ≥ 0.8 ✓。
+- **证据**:docs/eval-results/run-2026-09-09T055305Z-{vector,hybrid,hybrid_rerank}.json(params_hash `365740ee216243e4`,doc_commit `fe2ebd0`);指标矩阵 matrix-2026-09-09T055305Z.md。
+- **退出条件**:**通过**(2026-09-09 人拍板)→ 进入 3.2.6(M2b)。
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->
