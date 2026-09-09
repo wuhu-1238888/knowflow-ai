@@ -4,7 +4,7 @@
 > 对应:执行期持续维护(执行日志)
 
 <!-- 头部:测试基线,随任务更新 -->
-- 测试基线:后端 pytest 127/127 + 前端 vitest 58/58(M3 首批任务 + 检索策略产品决策 + 页面容器加宽后全绿,2026-09-09)
+- 测试基线:后端 pytest 127/127 + 前端 vitest 59/59(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏后全绿,2026-09-09)
 
 ## Round 1:Stage 01–08 文档阶段完成表
 
@@ -96,6 +96,7 @@
 | 3.3.2 修订 | 检索策略产品决策(2026-09-09 人拍板) | 已完成(问答页移除策略切换、固定默认 Hybrid+Rerank;元信息行/拒答卡去工程调试值;前端 vitest 47/47 绿) | (见下) |
 | 3.3.4(提前切片) | 评测页检索策略对比 + 选型叙事 | 已完成(三模式对比表:实测 Hit@5/MRR + 未实现指标显式「暂无数据」;L3 测试 4 例) | (见下) |
 | 布局修订 | 页面容器宽度分档 + 问答页克制副标题 | 已完成(2026-09-09 人拍板「宽幅居中 + max-width 封顶」;前端 vitest 58/58 绿) | (见下) |
+| 布局修订 2 | 问答页垂直节奏(顶部呼吸空间 + 区块间距统一) | 已完成(2026-09-09 人拍板;前端 vitest 59/59 绿) | (见下) |
 
 ### M3 首批任务记录(2026-09-09,依据人「继续下一步吧」启动)
 
@@ -121,6 +122,13 @@
 - **文件**:app-shell.tsx / page-header.tsx / page.tsx(+测试);DesignSystem/DesignRules/qa-guide 同步。
 - **测试**:前端 vitest 58/58(新增 containers 对拍 3 + AppShell 映射 7 + 副标题 1)、typecheck 干净;后端零改动。实机四页 SSR 200 且容器分档正确。
 
+### 问答页垂直节奏决策(2026-09-09,拍板人:王荟茹)
+
+- **决策**:问答页增加「呼吸空间」(页面级,其他页维持现状)——主内容顶部 24px(<1024px)/48px(≥1024px)呼吸空间;页头 → 提问区 24px;各状态区块(空态/加载/回答/拒答/错误)间统一 24px;加载态去掉额外 padding,与结果态同位、不跳动。禁 Hero 式大留白,首屏即可见提问框。
+- **实施**:page.tsx 根容器 `gap-4` → `gap-6 pt-6 lg:pt-12`;加载块去 `py-6`;全部使用既有 spacing token(s6/s12,即 Tailwind 4px 网格),未新增 token、未新增组件。
+- **测试**:前端 vitest 59/59(新增垂直节奏断言 1)、typecheck 干净;SSR 实测类名生效。
+- **附带修复**:vitest 缓存目录与 Next dev server 的 `node_modules/.vite` 冲突(反复出现 "Vitest failed to find the current suite")→ vitest.config.ts 设 Vite `cacheDir: node_modules/.vitest` 分离,双连跑验证稳定。
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->
@@ -131,12 +139,15 @@
 
 {2026-09-09 页面容器加宽分档} → 现象:全局单档 max-w 760px 使问答页在 1440/1920 下内容偏窄、右侧无效留白大,横向空间利用率不足。实施:人拍板「宽幅居中 + max-width 封顶」——DesignSystem 新增 containers token 三档(问答 960 / 评测·文档库 1152 / 关于 880),app-shell 按首段路由映射、未知路由回落 960;页内区块统一容器宽度;问答页页头加一行克制副标题。验证:vitest 58/58(新增 containers 对拍 + AppShell 映射用例)、typecheck 干净、实机四页 SSR 200 且分档正确;1280/1440/1920 三档宽度推演(1440 下问答 960 居中有 104px 两侧边距、评测 1152 全宽;1920 由 max-width 封顶不拉伸)。取舍:容器策略集中于 app-shell(非页面级);1280 下评测容器可用宽度 1008(达不到 1152 上限),表格容器内横向滚动兜底。
 
+{2026-09-09 问答页垂直节奏} → 现象:问答页内容紧贴主内容区顶部(main 无顶部 padding),标题/输入框过早进入视线,缺少从导航进入内容的过渡感。实施:人拍板页面级呼吸空间(其他页维持现状)——根容器 `gap-4` → `gap-6 pt-6 lg:pt-12`(24px <1024px / 48px ≥1024px),页头 → 提问区与各状态区块间统一 24px;加载块去 `py-6` 与结果态同位、不跳动。全部使用既有 spacing token(s6/s12),未新增 token/组件。验证:vitest 59/59(新增垂直节奏断言)、typecheck 干净、SSR 实测类名生效;首屏推演 1280/1440/1920 下提问框均在首屏可见。取舍:垂直节奏为问答页页面级决策,全局 main 的顶部 spacing 未动(避免其他三页整体下移),后续如统一处理需单独拍板。
+
 ## 已解决的问题
 
 | # | 问题 | 根因 | 修复 |
 | --- | --- | --- | --- |
 | 1 | pip 安装报 UnicodeDecodeError(gbk) | requirements.txt 含中文注释,pip 在中文 Windows 以 GBK 解码 UTF-8 失败 | 依赖清单注释改纯 ASCII(2026-09-09,任务 3.1.1) |
 | 2 | Vitest 5 不解 TSX(jsx: "preserve") | Next.js 要求 tsconfig jsx=preserve,Vitest 5(rolldown)不转换 JSX,import-analysis 报语法错 | 新增 devDependency @vitejs/plugin-react(Babel 转换)+ 未开 globals 时显式 cleanup 注册(2026-09-09,任务 3.1.2) |
+| 3 | Vitest 与 Next dev 缓存目录冲突 | 两者共用 `node_modules/.vite`,dev server 运行中反复出现 "Vitest failed to find the current suite"(setup.ts 语境丢失),清缓存只解一次 | vitest.config.ts 设 Vite `cacheDir: node_modules/.vitest` 与 Next 分离;双连跑验证稳定(2026-09-09) |
 
 ## 未解决的问题(遗留,编号滚动)
 
