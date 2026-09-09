@@ -225,7 +225,6 @@ components:
 | Button(primary/secondary/ghost/danger/icon) | 高度 36px、圆角 6px、14px/500;**每屏仅一个 primary**;danger 仅用于「删除」确认 |
 | Link | brand-600,默认无下划线,悬停下划线;不作为按钮替代(操作=按钮,跳转=链接) |
 | TextInput / AskTextarea | 见 front matter;焦点态 = brand 描边 + 3px focus-ring;错误态 = danger 描边 |
-| Segmented(检索模式) | 容器 surface-2 + 2px 内边距;激活项 = 白底 + 发丝线 + 微阴影;选项:向量 / 混合 / 混合+重排(默认) |
 | Badge | 高度 22px、圆角 6px、12px 文字;五种语义见 front matter;**徽标只用方形,不用胶囊** |
 | Table | 白底 + 发丝线容器(圆角 8px);表头 surface-2 底 12px/500;行 13px;行悬停 surface-2;数字列 numeric token |
 | Modal | 420px 居中、圆角 12px、遮罩 0.32;标题 16px/600;操作右对齐(取消 ghost + 确认 primary/danger);Esc 关闭;仅用于不可逆确认(删除文档) |
@@ -240,7 +239,7 @@ components:
 
 **1. 回答页(AnswerSheet)**——KnowFlow 的签名组件,替代聊天气泡。
 - 结构(自上而下):① 元信息行 → ② AI 回答正文 → ③ 依据带 → ④ 操作行。
-- ① 元信息行(`{components.answer-sheet-meta}`):`[模式徽标] · 依据 n 条 · 最高分 0.87 · 耗时 1.2s`——分数与数量全部 mono + tabular-nums;这就是 ai-design 定义的「置信度提示 = 检索分数 + citation 覆盖」的视觉落点。
+- ① 元信息行(`{components.answer-sheet-meta}`):`已基于企业知识库检索 · 依据 n 条`——依据数 mono + tabular-nums。2026-09-09 人拍板:模式徽标/最高分/耗时属工程调试信息,迁出主流程(保留在 API 与 QA 日志,检索质量展示由评测页承载);检索策略由系统固定为默认 Hybrid + Rerank,普通用户不选择。
 - ② 回答正文:`{typography.body-lg}`;前置 AI 眉题(micro「AI 回答」+ 8px 渐变圆点);正文内的断言后紧跟引用 chip。
 - ③ 依据带:小节标题「依据与来源(n)」;n 个依据条目按 [1..n] 编号纵向排列。
 - ④ 操作行:重新生成(secondary)/ 复制回答(ghost)/ 有用·无用(ghost 文字按钮)。
@@ -262,8 +261,8 @@ components:
 
 **5. 拒答卡(NoAnswerCallout)**——平静的中性灰,不是错误。
 - 外观:surface-2 底 + 发丝线,信息图标(16px ink-3),标题「知识库中未找到答案」heading-2,说明文字 body-md ink-2。
-- 检索证据行(no-answer-evidence):`最高相关度 0.42 · 阈值 0.65 · 依据 0 条`(mono)——把规则拒答展示为**可验证的事实**,而不是一句空话。
-- 建议两条(body-sm ink-2):「换个说法再试一次」「确认文档已上传到文档库」。
+- 检索证据行(no-answer-evidence):`依据 0 条`(mono)——拒答的轻量事实注脚;检索分数与阈值属工程调试信息,不进主流程(2026-09-09 人拍板,保留在 API 与 QA 日志)。
+- 建议三条(body-sm ink-2):「换个说法再试一次」「确认文档已上传到文档库」「仍不确定时,联系知识库管理员确认」。
 - 禁止:红色、感叹号、失败动画。
 
 **6. 冲突面板(ConflictPanel)**——并列呈现,不选边。

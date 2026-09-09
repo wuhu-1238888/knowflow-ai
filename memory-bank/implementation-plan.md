@@ -167,7 +167,7 @@
 - 验证:L3 组件测试:CitationChip 渲染/灰态/联动、拒答卡中性灰、冲突双卡等权、模式切换;L4 走查:DesignRules 问答页规则逐条 + 375px 无溢出;FR-11 重新生成(旧回答仍可见)
 - 产出物:问答页、AI 组件库、测试
 
-**状态:2026-09-09 最小闭环切片完成,全量交互待续(commit 见 progress Round 5)。** 交付(切片):问答页 src/app/page.tsx(状态机 idle/loading/done;必备区块:页头+Segmented 三模式切换默认混合+重排 → 提问区 AskTextarea + primary 提问 + 3 个评测集示例 chip → 结果区 AnswerSheet/NoAnswerCallout/ConflictPanel 三选一,错误态 ErrorCallout 带重试;加载态 =「AI 生成中」渐变胶囊(shimmer,白名单第 3 处);Enter 提交 / Shift+Enter 换行 / `/` 聚焦);组件 6 个(segmented / ask-textarea / answer-sheet(含 formatAnswer 轻量清洗)/ no-answer-callout / conflict-panel / error-callout);theme.css 增 --animate-shimmer;L3 测试 12 例(page.test.tsx 状态机 8 + answer-sheet.test.tsx 4),前端 vitest 44/44 绿、typecheck 干净。L2 实测(BFF 链路):年假 → 200 答案+3 引用(0.8336);拒答 → no_answer(0.0015);交通费 → 双口径并列回答(0.9930)。偏差记录:①任务定义全量(双向证据联动/CitationChip/SourceDrawer/操作行完整版/QuestionChip/生成中细分态)→ 按人指令先做最小闭环切片,全量项继续推进;②示例 chip 用 Button secondary 而非独立 QuestionChip 组件(全量时替换);③C13 示例在 Mock 下 conflicts 恒 null(mock_provider 设计),点击演示双口径并列回答而非冲突面板——面板 UI 已实现并经 L3 覆盖,真实验收归遗留 #1;④回答 markdown 轻量清洗,真实 provider 富文本渲染后续决定。
+**状态:2026-09-09 最小闭环切片完成,全量交互待续(commit 见 progress Round 5)。** 交付(切片):问答页 src/app/page.tsx(状态机 idle/loading/done;必备区块:页头+Segmented 三模式切换默认混合+重排 → 提问区 AskTextarea + primary 提问 + 3 个评测集示例 chip → 结果区 AnswerSheet/NoAnswerCallout/ConflictPanel 三选一,错误态 ErrorCallout 带重试;加载态 =「AI 生成中」渐变胶囊(shimmer,白名单第 3 处);Enter 提交 / Shift+Enter 换行 / `/` 聚焦);组件 6 个(segmented / ask-textarea / answer-sheet(含 formatAnswer 轻量清洗)/ no-answer-callout / conflict-panel / error-callout);theme.css 增 --animate-shimmer;L3 测试 12 例(page.test.tsx 状态机 8 + answer-sheet.test.tsx 4),前端 vitest 44/44 绿、typecheck 干净。L2 实测(BFF 链路):年假 → 200 答案+3 引用(0.8336);拒答 → no_answer(0.0015);交通费 → 双口径并列回答(0.9930)。偏差记录:①任务定义全量(双向证据联动/CitationChip/SourceDrawer/操作行完整版/QuestionChip/生成中细分态)→ 按人指令先做最小闭环切片,全量项继续推进;②示例 chip 用 Button secondary 而非独立 QuestionChip 组件(全量时替换);③C13 示例在 Mock 下 conflicts 恒 null(mock_provider 设计),点击演示双口径并列回答而非冲突面板——面板 UI 已实现并经 L3 覆盖,真实验收归遗留 #1;④回答 markdown 轻量清洗,真实 provider 富文本渲染后续决定;⑤**2026-09-09 人拍板(产品决策)**:检索策略切换从问答页移除——普通用户不选择 RAG 策略,系统固定默认 Hybrid + Rerank(与后端 /api/ask 默认一致);三模式对比迁移至评测页(提前切片交付静态快照对比表);AnswerSheet 元信息行简化为「已基于企业知识库检索 · 依据 n 条」(模式徽标/最高分/耗时属工程调试值,迁出主流程,保留在 API 与 QA 日志);拒答卡证据行简化为「依据 0 条」并新增「联系知识库管理员」建议;segmented.tsx 组件随之删除。
 
 ### 任务 3.3.3 文档库页(上传/列表/管理)
 - 做什么:UploadZone(5 格式校验/拖拽/无 OCR 说明);文档表格(标题/格式徽标/状态徽标 4 态/分块数/上传时间/操作);删除 = danger 确认模态(二次确认);重建索引;上传中行内进度
@@ -183,7 +183,7 @@
 - 验证:L3 矩阵渲染/运行中态/展开明细;L4 走查:数字全 mono、无手填数字、页脚可回溯
 - 产出物:评测页、测试
 
-**状态:未开始。**
+**状态:2026-09-09 部分提前(切片,随「检索策略迁移评测页」人拍板)。** 已交付:检索策略对比表(三模式 × Hit@5/MRR 实测值 + Recall@K/Precision@K/平均延迟显式「暂无数据」,来源页脚 run JSON + params_hash + doc_commit)+「为什么默认 Hybrid + Rerank」选型叙事(诚实边界:不预设重排一定最好)+ L3 测试 4 例(三模式行/暂无数据 9 格/默认徽标/不虚构提升幅度)。剩余:运行评测按钮 + 运行状态、RunList 运行历史、per-case 明细、动态数据源(当前静态快照)、页头改「检索评测」。
 
 ### 任务 3.3.5 关于页(synthetic 声明)
 - 做什么:定位一句话;NovaTech 虚构数据声明卡(中性卡片,正文级排版);技术栈列表(mono);边界说明(不做清单摘要)
