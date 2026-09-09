@@ -4,7 +4,7 @@
 > 对应:执行期持续维护(执行日志)
 
 <!-- 头部:测试基线,随任务更新 -->
-- 测试基线:后端 pytest 141/141 + 前端 vitest 114/114(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏 + 3.3.2 全量交互补齐 + 3.3.3 文档库页后全绿,2026-09-09)
+- 测试基线:后端 pytest 149/149 + 前端 vitest 125/125(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏 + 3.3.2 全量交互补齐 + 3.3.3 文档库页 + 3.3.4 评测页全量后全绿,2026-09-10)
 
 ## Round 1:Stage 01–08 文档阶段完成表
 
@@ -99,6 +99,7 @@
 | 布局修订 2 | 问答页垂直节奏(顶部呼吸空间 + 区块间距统一) | 已完成(2026-09-09 人拍板;前端 vitest 59/59 绿) | (见下) |
 | 3.3.2 全量 | 引用 chip / 双向证据联动 / 来源抽屉 / 重新生成 / 有用·无用(FR-11/FR-12) | 已完成(后端 pytest 132/132 + 前端 vitest 79/79 绿;typecheck 干净) | (见下) |
 | 3.3.3 | 文档库页(上传/列表/删除确认/重建索引) | 已完成(后端 pytest 141/141 + 前端 vitest 114/114 绿;typecheck 干净) | (见下) |
+| 3.3.4 全量 | 评测页(运行评测/运行历史/per-case 明细/动态数据源) | 已完成(后端 pytest 149/149 + 前端 vitest 125/125 绿;typecheck 干净;实机三模式真实评测通过) | (见下) |
 
 ### M3 首批任务记录(2026-09-09,依据人「继续下一步吧」启动)
 
@@ -147,6 +148,15 @@
 - **偏差记录**:①上传同步解析,未强制单独 60s 上限(BFF 120s 全局超时兜底);②列表 UI 单页拉全(page_size=100,分页 UI 未做,演示规模充足);③解析失败详细错误仅会话内保留(刷新后只剩 failed 行,重建索引重试);④UI 四态(含待索引)与库三态(parsing/indexed/failed)映射:待索引 = 上传瞬间 UI 兜底态,库不扩字段(沿用 3.1.3 偏差记录 ③)。
 - **L4 走查**:待人操作(qa-guide-3.3.3.md)。
 - **下一步**:3.3.4 评测页全量(运行按钮/运行历史/动态数据)→ 3.3.5 关于页 → 3.4.1 端到端演示闭环。
+
+### 3.3.4 评测页全量记录(2026-09-10)
+
+- **后端(评测三端点 + 运行状态模型)**:`evaluation_runs` 表迁移 `status`(running/completed/failed,CHECK 约束)+ `per_case_json` 列(轻量 `_migrate`,老库 ALTER 补列,历史 CLI 批次语义不变);`Repository.update_run`(白名单局部更新);`eval_engine.start_eval/_run_batch`(先落三行 running → 后台 daemon 线程顺序跑三模式 → 完成/失败回写 + per_case 落库;run JSON 同落 runtime/eval-runs 运行态);端点:`GET /api/eval/runs`(摘要,per_case 不随列表)/`GET /api/eval/runs/{id}`(明细,404「评测运行不存在」)/`POST /api/eval/run`(202;并发控制 = 数据库驱动:存在新鲜 running 行 → 409「已有评测正在运行,请等待完成」;>30 分钟遗留 running → 标记 failed「运行中断(超时未完成)」后放行)。测试:test_api_eval.py 8 例新建(空列表/202 三行同批/新鲜 409/过期放行/明细含 per_case/CLI 无明细/404/failed 携带 error),pytest 149/149。
+- **前端(评测页全量重写)**:页头「检索评测」;「评测矩阵」区 = primary「运行评测」按钮(运行中禁用 + 按钮内 16px 细环旋转)+ 动态矩阵(行=最新完成批次三模式,列=逐例明细推导的 7 类场景 + Hit@5 + MRR,混合+重排行 surface-2 底 + 「当前默认」徽标,Recall@K/Precision@K/平均延迟显式「暂无数据」)+ 数据来源页脚(run_id/params_hash/doc_commit/时间,动态取数);「运行历史」区 = 每行模式/状态徽标/时间/params 8 位/commit/Hit@5+MRR/展开,点击展开按需拉取逐例明细(用例/类别/问题/期望行为/首个期望排名/命中/RR,跳过例底部 caption);历史 CLI 批次(has_per_case=false)矩阵仅总指标 + 诚实说明、展开显示「未存逐例明细」说明;运行中矩阵骨架脉动 + 每 5 秒轮询自动刷新;空态/列表失败重试/409 启动错误提示。BFF 新增 `GET /api/eval/runs/[id]` 路由;rag.ts 新增 listEvalRuns/startEvalRun/getEvalRun + 全套类型;icons 新增 IconPlay;format 新增 formatEvalTime。测试:page.test 全量重写 11 例 + rag.test 评测 4 例,前端 vitest 125/125、typecheck 干净。
+- **实机双链路(2026-09-10,真实模型)**:经 BFF POST /api/eval/run → 202 {run_ids×3};直连 8000 并发 POST → 409;批次状态轮询:vector/hybrid 约 2 分钟内 completed、hybrid_rerank 约 8 分钟 completed(重排推理慢,已写入 qa-guide 已知非缺陷);指标实测 vector 12/12·MRR 0.9583、hybrid 12/12·0.9028、hybrid_rerank 12/12·0.9583(与历史 CLI 批次一致,params_hash 未变);GET /api/eval/runs/{id} per_case 14 例齐全(hit/rank/rr 正确);404 可读错误;run JSON 落 runtime/eval-runs(运行态,git 未跟踪);历史 9 批 CLI 记录迁移后 has_per_case=false 正常。
+- **偏差记录**:①真实评测单批约 8 分钟(模型推理),页面以 5 秒轮询 + 骨架承载,qa-guide 标注「已知非缺陷」;②BFF proxyToRag 将后端 202 归一为 200(成功语义不变,client 以 ok 判断);③选型叙事段去除原硬编码数字(动态矩阵接入后数字只来自最新批次,叙事改为「数值随最新批次实测动态更新,见上方矩阵」);④矩阵只展示最新完成批次,历史批次指标在运行历史行内可见(不做批次切换 UI);⑤测试用「未来时点 created_at」保证新鲜 running 行判定不随真实时钟漂移(409 用例)。
+- **L4 走查**:待人操作(qa-guide-3.3.4.md)。
+- **下一步**:3.3.5 关于页(synthetic 声明)→ 3.4.1 端到端演示闭环(≤5 分钟)。
 
 ## 修订
 
