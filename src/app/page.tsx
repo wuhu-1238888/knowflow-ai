@@ -17,7 +17,9 @@ import { ApiError, askQuestion, type AskResponse } from "@/lib/rag";
  * 示例问题来自评测集(C01/C13/C11)。
  * C13 在 Mock 下演示双口径并列回答(冲突面板 UI 已实现,后端 conflicts 恒 null → 遗留 #1)。
  * 切片未含:双向证据联动 / SourceDrawer / 重新生成 / 有用·无用(3.3.2 全量补齐);
- * 加载态合并为「AI 生成中」胶囊(检索中 Skeleton 待流式分段后细分)。 */
+ * 加载态合并为「AI 生成中」胶囊(检索中 Skeleton 待流式分段后细分)。
+ * 垂直节奏(2026-09-09 人拍板):主内容顶部呼吸空间 24px(<1024px)/48px(≥1024px);
+ * 页头 → 提问区与各区块间统一 24px(gap-6),加载态与结果态同位不跳动。 */
 
 const EXAMPLE_QUESTIONS = [
   { query: "年假有几天?", hint: "回答 + 引用(评测集 C01)" },
@@ -50,7 +52,7 @@ export default function AskPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6 pt-6 lg:pt-12">
       <PageHeader title="知识问答" subtitle="企业知识助手,基于企业知识库回答问题" />
 
       <div className="flex flex-col gap-2">
@@ -71,7 +73,7 @@ export default function AskPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-start gap-2 py-6">
+        <div className="flex flex-col items-start gap-2">
           {/* 「AI 生成中」胶囊:唯一 pill + 唯一 shimmer(白名单) */}
           <span className="inline-flex animate-shimmer items-center gap-1.5 rounded-full bg-ai-gradient px-3 py-1.5 text-body-sm text-ink-inverse">
             AI 生成中

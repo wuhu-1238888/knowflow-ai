@@ -85,6 +85,14 @@ describe("AskPage idle 态", () => {
       screen.getByText("企业知识助手,基于企业知识库回答问题"),
     ).toBeTruthy();
   });
+
+  it("页面级垂直节奏:顶部呼吸空间 pt-6 lg:pt-12 + 区块间统一 gap-6(2026-09-09 人拍板)", () => {
+    const { container } = render(<AskPage />);
+    const root = container.firstElementChild;
+    expect(root?.className).toContain("pt-6");
+    expect(root?.className).toContain("lg:pt-12");
+    expect(root?.className).toContain("gap-6");
+  });
 });
 
 describe("AskPage 回答流", () => {
