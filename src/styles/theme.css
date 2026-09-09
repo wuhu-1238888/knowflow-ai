@@ -108,6 +108,19 @@
   /* ── 动效 ── */
   --default-transition-duration: 150ms;
   --default-transition-timing-function: ease-out;
+
+  /* 「AI 生成中」胶囊呼吸(DesignSystem motion.shimmer;白名单内唯一无限循环动画) */
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
 }
 
 @layer base {
