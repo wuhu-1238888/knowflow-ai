@@ -1,0 +1,1523 @@
+{
+  "run_id": "gen-446dbfed37b3",
+  "mode": "hybrid",
+  "provider": "MockProvider",
+  "params_hash": "365740ee216243e4",
+  "doc_commit": "6190456",
+  "created_at": "2026-09-09T06:46:33+00:00",
+  "top_k": 8,
+  "per_case": [
+    {
+      "case_id": "C01",
+      "category": "精确关键词检索",
+      "query": "年假有几天?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "年假 10 天",
+        "司龄每满一年增加 1 天,上限 15 天"
+      ],
+      "no_answer": false,
+      "answer": "## 年假\n- 正式员工每年享有**年假 10 天**,司龄每满一年增加 1 天,上限 15 天。\n\n## 其他说明\n- 法定节假日加班可申请调休,调休与年假互不占用额度;\n- 请假期间的日常工作交接由本人与带教导师/直属上级协商安排。\n\n## 病假与事假\n- 病假需提供医院证明,病假期间薪资按国家规定执行;\n- 事假按天扣除当日薪资,每月事假累计不超过 3 天;\n- 连续请假超过 5 个工作日,需人事行政部与部门负责人共同评估工作交接安排。",
+      "confidence": 0.711188,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-hr-05",
+          "chunk_id": "doc-hr-05-1",
+          "quote": "## 年假\n- 正式员工每年享有**年假 10 天**,司龄每满一年增加 1 天,上限 15 天。"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-hr-05",
+          "chunk_id": "doc-hr-05-4",
+          "quote": "## 其他说明\n- 法定节假日加班可申请调休,调休与年假互不占用额度;\n- 请假期间的日常工作交接由本人与带教导师/直属上级协商安排。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-hr-05",
+          "chunk_id": "doc-hr-05-3",
+          "quote": "## 病假与事假\n- 病假需提供医院证明,病假期间薪资按国家规定执行;\n- 事假按天扣除当日薪资,每月事假累计不超过 3 天;\n- 连续请假超过 5 个工作日,需人事行政部与部门负责人共同评估工作交接安排。"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-05-1",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.711188
+        },
+        {
+          "chunk_id": "doc-hr-05-4",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.032002,
+          "rerank_score": null,
+          "vec_score": 0.577047
+        },
+        {
+          "chunk_id": "doc-hr-05-3",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.016129,
+          "rerank_score": null,
+          "vec_score": 0.578015
+        },
+        {
+          "chunk_id": "doc-hr-05-2",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.015625,
+          "rerank_score": null,
+          "vec_score": 0.574712
+        },
+        {
+          "chunk_id": "doc-hr-01-2",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.015385,
+          "rerank_score": null,
+          "vec_score": 0.526972
+        },
+        {
+          "chunk_id": "doc-hr-05-0",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.015152,
+          "rerank_score": null,
+          "vec_score": 0.484947
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.014925,
+          "rerank_score": null,
+          "vec_score": 0.476327
+        },
+        {
+          "chunk_id": "doc-hr-04-0",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.014706,
+          "rerank_score": null,
+          "vec_score": 0.455625
+        }
+      ],
+      "point_precheck": {
+        "covered": [
+          "年假 10 天",
+          "司龄每满一年增加 1 天,上限 15 天"
+        ],
+        "missing": [],
+        "total": 2
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C02",
+      "category": "精确关键词检索",
+      "query": "VPN 客户端在哪里下载?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "下载地址 https://vpn.novatech.example.com/client",
+        "用企业账号登录后选择操作系统版本"
+      ],
+      "no_answer": false,
+      "answer": "## 客户端下载\n- **下载地址:`https://vpn.novatech.example.com/client`**,使用企业账号(NF-ID)登录后选择对应操作系统版本下载。\n\n## 常见问题\n- **连不上**:先确认已连接外网,再检查客户端是否为最新版本;仍失败请联系 IT 服务台并提供错误码。\n\n## Q2:电脑连不上公司网络怎么办?",
+      "confidence": 0.741564,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-it-02",
+          "chunk_id": "doc-it-02-1",
+          "quote": "## 客户端下载\n- **下载地址:`https://vpn.novatech.example.com/client`**,使用企业账号(NF-ID)登录后选择对应操作系统版本下载。"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-it-02",
+          "chunk_id": "doc-it-02-3",
+          "quote": "## 常见问题\n- **连不上**:先确认已连接外网,再检查客户端是否为最新版本;仍失败请联系 IT 服务台并提供错误码。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-prod-04",
+          "chunk_id": "doc-prod-04-2",
+          "quote": "## Q2:电脑连不上公司网络怎么办?"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-it-02-1",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.741564
+        },
+        {
+          "chunk_id": "doc-it-02-3",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.031746,
+          "rerank_score": null,
+          "vec_score": 0.605371
+        },
+        {
+          "chunk_id": "doc-prod-04-2",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031514,
+          "rerank_score": null,
+          "vec_score": 0.552047
+        },
+        {
+          "chunk_id": "doc-it-02-2",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.031281,
+          "rerank_score": null,
+          "vec_score": 0.606296
+        },
+        {
+          "chunk_id": "doc-it-02-0",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.03101,
+          "rerank_score": null,
+          "vec_score": 0.578639
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.029644,
+          "rerank_score": null,
+          "vec_score": 0.517586
+        },
+        {
+          "chunk_id": "doc-prod-01-0",
+          "doc_id": "doc-prod-01",
+          "source": "hybrid",
+          "score": 0.028083,
+          "rerank_score": null,
+          "vec_score": 0.506345
+        },
+        {
+          "chunk_id": "doc-prod-03-2",
+          "doc_id": "doc-prod-03",
+          "source": "hybrid",
+          "score": 0.028006,
+          "rerank_score": null,
+          "vec_score": 0.503854
+        }
+      ],
+      "point_precheck": {
+        "covered": [
+          "下载地址 https://vpn.novatech.example.com/client"
+        ],
+        "missing": [
+          "用企业账号登录后选择操作系统版本"
+        ],
+        "total": 2
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C03",
+      "category": "语义检索",
+      "query": "休假要提前多久申请?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "提前 2 个工作日提交申请"
+      ],
+      "no_answer": false,
+      "answer": "## 请假流程\n- 所有请假**需提前 2 个工作日**在办公系统提交申请;\n- 3 天以内由部门负责人审批,3 天以上需人事行政部复核;\n- 突发情况(生病、家事)可先电话告知,事后 24 小时内补交申请。\n\n## 考勤与出勤\n- 实行弹性上下班,每日在岗不少于 8 小时,含 1 小时午休。\n\n## Q4:报销多久能到账?",
+      "confidence": 0.718265,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-hr-05",
+          "chunk_id": "doc-hr-05-2",
+          "quote": "## 请假流程\n- 所有请假**需提前 2 个工作日**在办公系统提交申请;\n- 3 天以内由部门负责人审批,3 天以上需人事行政部复核;\n- 突发情况(生病、家事)可先电话告知,事后 24 小时内补交申请。"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-hr-01",
+          "chunk_id": "doc-hr-01-2",
+          "quote": "## 考勤与出勤\n- 实行弹性上下班,每日在岗不少于 8 小时,含 1 小时午休。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-prod-04",
+          "chunk_id": "doc-prod-04-4",
+          "quote": "## Q4:报销多久能到账?"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-05-2",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.718265
+        },
+        {
+          "chunk_id": "doc-hr-01-2",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.031514,
+          "rerank_score": null,
+          "vec_score": 0.605671
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031025,
+          "rerank_score": null,
+          "vec_score": 0.566664
+        },
+        {
+          "chunk_id": "doc-hr-05-4",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.03055,
+          "rerank_score": null,
+          "vec_score": 0.617033
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.02748,
+          "rerank_score": null,
+          "vec_score": 0.491737
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.026901,
+          "rerank_score": null,
+          "vec_score": 0.471271
+        },
+        {
+          "chunk_id": "doc-hr-05-3",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.016129,
+          "rerank_score": null,
+          "vec_score": 0.655406
+        },
+        {
+          "chunk_id": "doc-hr-05-1",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.015873,
+          "rerank_score": null,
+          "vec_score": 0.641689
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [
+          "提前 2 个工作日提交申请"
+        ],
+        "total": 1
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C04",
+      "category": "语义检索",
+      "query": "怎么在手机上收发公司邮件?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "添加 IMAP 账户",
+        "服务器地址 imap.novatech.example.com / smtp.novatech.example.com",
+        "打开推送通知"
+      ],
+      "no_answer": false,
+      "answer": "synthetic: true | NovaTech 虚构演示文档\nNovaTech 企业邮箱设置指南\n适用对象:全体新员工 | 版本:2026-04\n一、邮箱基本信息\n- 邮箱地址:姓名拼音@novatech.example.com,例如\n\n## Q2:电脑连不上公司网络怎么办?\n\nsynthetic: true | NovaTech 虚构演示文档\nNovaTech 账号申请与密码管理\n适用对象:全体新员工 | 版本:2026-05\n一、账号开通流程\n1. 新员工入职 Day 1 由 IT 服务台统一创建企业账号,账号",
+      "confidence": 0.662465,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-it-03",
+          "chunk_id": "doc-it-03-0",
+          "quote": "synthetic: true | NovaTech 虚构演示文档\nNovaTech 企业邮箱设置指南\n适用对象:全体新员工 | 版本:2026-04\n一、邮箱基本信息\n- 邮箱地址:姓名拼音@novatech.example.com,例如"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-prod-04",
+          "chunk_id": "doc-prod-04-2",
+          "quote": "## Q2:电脑连不上公司网络怎么办?"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-it-01",
+          "chunk_id": "doc-it-01-0",
+          "quote": "synthetic: true | NovaTech 虚构演示文档\nNovaTech 账号申请与密码管理\n适用对象:全体新员工 | 版本:2026-05\n一、账号开通流程\n1. 新员工入职 Day 1 由 IT 服务台统一创建企业账号,账号"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.662465
+        },
+        {
+          "chunk_id": "doc-prod-04-2",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": null,
+          "vec_score": 0.542485
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.030777,
+          "rerank_score": null,
+          "vec_score": 0.515719
+        },
+        {
+          "chunk_id": "doc-it-02-2",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.030622,
+          "rerank_score": null,
+          "vec_score": 0.565842
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.030214,
+          "rerank_score": null,
+          "vec_score": 0.476304
+        },
+        {
+          "chunk_id": "doc-hr-01-1",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.028898,
+          "rerank_score": null,
+          "vec_score": 0.471982
+        },
+        {
+          "chunk_id": "doc-prod-04-3",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.027584,
+          "rerank_score": null,
+          "vec_score": 0.457467
+        },
+        {
+          "chunk_id": "doc-prod-02-0",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.026611,
+          "rerank_score": null,
+          "vec_score": 0.450502
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [
+          "添加 IMAP 账户",
+          "服务器地址 imap.novatech.example.com / smtp.novatech.example.com",
+          "打开推送通知"
+        ],
+        "total": 3
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C05",
+      "category": "多文档问题",
+      "query": "入职第一周要办哪些事?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "到人事行政部办理入职手续并签署劳动合同",
+        "完成企业账号开通与密码修改",
+        "配置 VPN 与公司邮箱",
+        "完成信息安全培训并通过考试"
+      ],
+      "no_answer": false,
+      "answer": "## Q1:入职第一天应该先去哪里?\n\n## 第一周必须完成的事项\n1. **Day 1(报到日)**:\n- 到人事行政部办理入职手续,提交身份证、银行卡复印件,签署劳动合同;\n- 领取工牌、门禁卡与办公设备(笔记本电脑、显示器);\n- 认识带教导师,加入部门与企业微信大群。\n\n## 人事行政部(约 30 人)\n- 负责入职、薪资、福利与办公室事务,新员工入职第一站。",
+      "confidence": 0.753454,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-prod-04",
+          "chunk_id": "doc-prod-04-1",
+          "quote": "## Q1:入职第一天应该先去哪里?"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-hr-02",
+          "chunk_id": "doc-hr-02-1",
+          "quote": "## 第一周必须完成的事项\n1. **Day 1(报到日)**:\n- 到人事行政部办理入职手续,提交身份证、银行卡复印件,签署劳动合同;\n- 领取工牌、门禁卡与办公设备(笔记本电脑、显示器);\n- 认识带教导师,加入部门与企业微信大群。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-proj-01",
+          "chunk_id": "doc-proj-01-4",
+          "quote": "## 人事行政部(约 30 人)\n- 负责入职、薪资、福利与办公室事务,新员工入职第一站。"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-prod-04-1",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.032002,
+          "rerank_score": null,
+          "vec_score": 0.68692
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.031778,
+          "rerank_score": null,
+          "vec_score": 0.753454
+        },
+        {
+          "chunk_id": "doc-proj-01-4",
+          "doc_id": "doc-proj-01",
+          "source": "hybrid",
+          "score": 0.031778,
+          "rerank_score": null,
+          "vec_score": 0.599902
+        },
+        {
+          "chunk_id": "doc-hr-02-3",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.031754,
+          "rerank_score": null,
+          "vec_score": 0.713871
+        },
+        {
+          "chunk_id": "doc-hr-02-0",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": null,
+          "vec_score": 0.67195
+        },
+        {
+          "chunk_id": "doc-tech-03-3",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.029857,
+          "rerank_score": null,
+          "vec_score": 0.550771
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.029644,
+          "rerank_score": null,
+          "vec_score": 0.567331
+        },
+        {
+          "chunk_id": "doc-hr-01-3",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.029199,
+          "rerank_score": null,
+          "vec_score": 0.524058
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [
+          "到人事行政部办理入职手续并签署劳动合同",
+          "完成企业账号开通与密码修改",
+          "配置 VPN 与公司邮箱",
+          "完成信息安全培训并通过考试"
+        ],
+        "total": 4
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C06",
+      "category": "多文档问题",
+      "query": "新人第一次参与代码发布要做什么?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "确认已获得生产环境访问权限(按次授权)",
+        "确认代码通过 CI 检查",
+        "由带教导师陪同完成首次发布",
+        "异常时第一时间回滚"
+      ],
+      "no_answer": false,
+      "answer": "## 新人第一次参与发布的 Checklist\n- 确认自己已获得生产环境访问权限(按次授权);\n- 提前阅读《代码规范》,确认代码已通过 CI 检查;\n- 由带教导师陪同完成首次发布,灰度观察阶段两人共同盯指标;\n- 发布遇到任何异常,第\n\nNovaTech 代码规范\nNovaTech 代码规范\n版本:2026-06 | 适用对象:全体研发人员\n分支与提交\n主干分支 main 始终可发布;功能开发从 main 拉出特性分支,合并前必须通过 CI。\n\n## 研发流程\n- **POD**:Publish On Demand 的缩写,即**按需发布流程**。",
+      "confidence": 0.746084,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-tech-03",
+          "chunk_id": "doc-tech-03-3",
+          "quote": "## 新人第一次参与发布的 Checklist\n- 确认自己已获得生产环境访问权限(按次授权);\n- 提前阅读《代码规范》,确认代码已通过 CI 检查;\n- 由带教导师陪同完成首次发布,灰度观察阶段两人共同盯指标;\n- 发布遇到任何异常,第"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-tech-04",
+          "chunk_id": "doc-tech-04-0",
+          "quote": "NovaTech 代码规范\nNovaTech 代码规范\n版本:2026-06 | 适用对象:全体研发人员\n分支与提交\n主干分支 main 始终可发布;功能开发从 main 拉出特性分支,合并前必须通过 CI。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-prod-02",
+          "chunk_id": "doc-prod-02-2",
+          "quote": "## 研发流程\n- **POD**:Publish On Demand 的缩写,即**按需发布流程**。"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-tech-03-3",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.746084
+        },
+        {
+          "chunk_id": "doc-tech-04-0",
+          "doc_id": "doc-tech-04",
+          "source": "hybrid",
+          "score": 0.031514,
+          "rerank_score": null,
+          "vec_score": 0.615626
+        },
+        {
+          "chunk_id": "doc-prod-02-2",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.031514,
+          "rerank_score": null,
+          "vec_score": 0.592155
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.031025,
+          "rerank_score": null,
+          "vec_score": 0.604642
+        },
+        {
+          "chunk_id": "doc-tech-03-2",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.030331,
+          "rerank_score": null,
+          "vec_score": 0.603097
+        },
+        {
+          "chunk_id": "doc-prod-04-5",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.030077,
+          "rerank_score": null,
+          "vec_score": 0.589652
+        },
+        {
+          "chunk_id": "doc-hr-02-2",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.029139,
+          "rerank_score": null,
+          "vec_score": 0.515021
+        },
+        {
+          "chunk_id": "doc-tech-01-1",
+          "doc_id": "doc-tech-01",
+          "source": "hybrid",
+          "score": 0.028405,
+          "rerank_score": null,
+          "vec_score": 0.560412
+        }
+      ],
+      "point_precheck": {
+        "covered": [
+          "由带教导师陪同完成首次发布"
+        ],
+        "missing": [
+          "确认已获得生产环境访问权限(按次授权)",
+          "确认代码通过 CI 检查",
+          "异常时第一时间回滚"
+        ],
+        "total": 4
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C07",
+      "category": "相似文档干扰",
+      "query": "打印机卡纸了怎么办?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "按面板「卡纸处理」按钮让滚轮自动退纸",
+        "失败则打开前盖沿出纸方向轻轻抽出",
+        "仍无法解决联系 IT 服务台"
+      ],
+      "no_answer": false,
+      "answer": "### 打印机卡纸怎么办\n1. **不要用力拉扯纸张**——按打印机面板上的「卡纸处理」按钮,让滚轮自动退纸;\n2. 若自动退纸失败,打开前盖,沿出纸方向轻轻抽出卡住的纸张;\n3. 检查纸盒:纸张受潮或放反会导致反复卡纸,换一叠新纸再试;\n\n\n### 打印队列与耗材\n- 打印任务可在打印队列中取消:开始菜单搜索「打印机」→ 打开队列 → 右键取消;\n- 缺墨、缺纸可直接到前台领用耗材,前台会登记。\n\n## 打印机\n- 办公区每层设有一台共享打印机(3F 东侧、5F 西侧),支持彩打与双面打印。",
+      "confidence": 0.802977,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-it-04",
+          "chunk_id": "doc-it-04-2",
+          "quote": "### 打印机卡纸怎么办\n1. **不要用力拉扯纸张**——按打印机面板上的「卡纸处理」按钮,让滚轮自动退纸;\n2. 若自动退纸失败,打开前盖,沿出纸方向轻轻抽出卡住的纸张;\n3. 检查纸盒:纸张受潮或放反会导致反复卡纸,换一叠新纸再试;\n"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-it-04",
+          "chunk_id": "doc-it-04-3",
+          "quote": "### 打印队列与耗材\n- 打印任务可在打印队列中取消:开始菜单搜索「打印机」→ 打开队列 → 右键取消;\n- 缺墨、缺纸可直接到前台领用耗材,前台会登记。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-it-04",
+          "chunk_id": "doc-it-04-1",
+          "quote": "## 打印机\n- 办公区每层设有一台共享打印机(3F 东侧、5F 西侧),支持彩打与双面打印。"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-it-04-2",
+          "doc_id": "doc-it-04",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.802977
+        },
+        {
+          "chunk_id": "doc-it-04-3",
+          "doc_id": "doc-it-04",
+          "source": "hybrid",
+          "score": 0.031754,
+          "rerank_score": null,
+          "vec_score": 0.67068
+        },
+        {
+          "chunk_id": "doc-it-04-1",
+          "doc_id": "doc-it-04",
+          "source": "hybrid",
+          "score": 0.031746,
+          "rerank_score": null,
+          "vec_score": 0.602825
+        },
+        {
+          "chunk_id": "doc-it-04-0",
+          "doc_id": "doc-it-04",
+          "source": "hybrid",
+          "score": 0.03101,
+          "rerank_score": null,
+          "vec_score": 0.541588
+        },
+        {
+          "chunk_id": "doc-tech-02-0",
+          "doc_id": "doc-tech-02",
+          "source": "hybrid",
+          "score": 0.03031,
+          "rerank_score": null,
+          "vec_score": 0.537909
+        },
+        {
+          "chunk_id": "doc-prod-04-2",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.029828,
+          "rerank_score": null,
+          "vec_score": 0.46897
+        },
+        {
+          "chunk_id": "doc-it-02-3",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.015152,
+          "rerank_score": null,
+          "vec_score": 0.496295
+        },
+        {
+          "chunk_id": "doc-prod-04-5",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.015152,
+          "rerank_score": null,
+          "vec_score": null
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [
+          "按面板「卡纸处理」按钮让滚轮自动退纸",
+          "失败则打开前盖沿出纸方向轻轻抽出",
+          "仍无法解决联系 IT 服务台"
+        ],
+        "total": 3
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C08",
+      "category": "相似文档干扰",
+      "query": "怎么修改公司账号密码?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "办公门户「账号设置 - 修改密码」",
+        "密码不少于 10 位,含大小写字母与数字",
+        "每 90 天强制更换一次"
+      ],
+      "no_answer": false,
+      "answer": "synthetic: true | NovaTech 虚构演示文档\nNovaTech 账号申请与密码管理\n适用对象:全体新员工 | 版本:2026-05\n一、账号开通流程\n1. 新员工入职 Day 1 由 IT 服务台统一创建企业账号,账号\n\n## 账号与信息安全\n- 入职后由 IT 部门统一开通企业账号,初始密码需在首次登录后修改。\n\n## 连接配置\n1. 安装客户端后,打开软件填写服务器地址:`vpn.novatech.example.com`;\n2. 用户名使用企业账号,密码为办公门户密码;\n3. 首次连接需完成手机验证码二次验证(每 30 天一次);\n4. 连接成功",
+      "confidence": 0.690474,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-it-01",
+          "chunk_id": "doc-it-01-0",
+          "quote": "synthetic: true | NovaTech 虚构演示文档\nNovaTech 账号申请与密码管理\n适用对象:全体新员工 | 版本:2026-05\n一、账号开通流程\n1. 新员工入职 Day 1 由 IT 服务台统一创建企业账号,账号"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-hr-01",
+          "chunk_id": "doc-hr-01-3",
+          "quote": "## 账号与信息安全\n- 入职后由 IT 部门统一开通企业账号,初始密码需在首次登录后修改。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-it-02",
+          "chunk_id": "doc-it-02-2",
+          "quote": "## 连接配置\n1. 安装客户端后,打开软件填写服务器地址:`vpn.novatech.example.com`;\n2. 用户名使用企业账号,密码为办公门户密码;\n3. 首次连接需完成手机验证码二次验证(每 30 天一次);\n4. 连接成功"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.690474
+        },
+        {
+          "chunk_id": "doc-hr-01-3",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.032258,
+          "rerank_score": null,
+          "vec_score": 0.672027
+        },
+        {
+          "chunk_id": "doc-it-02-2",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.03101,
+          "rerank_score": null,
+          "vec_score": 0.577495
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.030798,
+          "rerank_score": null,
+          "vec_score": 0.517089
+        },
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.030579,
+          "rerank_score": null,
+          "vec_score": 0.594349
+        },
+        {
+          "chunk_id": "doc-prod-04-2",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.030118,
+          "rerank_score": null,
+          "vec_score": 0.502624
+        },
+        {
+          "chunk_id": "doc-it-02-3",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.029469,
+          "rerank_score": null,
+          "vec_score": 0.567718
+        },
+        {
+          "chunk_id": "doc-tech-01-1",
+          "doc_id": "doc-tech-01",
+          "source": "hybrid",
+          "score": 0.02885,
+          "rerank_score": null,
+          "vec_score": 0.485985
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [
+          "办公门户「账号设置 - 修改密码」",
+          "密码不少于 10 位,含大小写字母与数字",
+          "每 90 天强制更换一次"
+        ],
+        "total": 3
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C09",
+      "category": "专业术语",
+      "query": "NF-ID 是什么?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "NovaFlow ID 的缩写",
+        "统一身份标识",
+        "单点登录办公门户/邮箱/VPN/NovaFlow 控制台等内部系统"
+      ],
+      "no_answer": false,
+      "answer": "## 平台与身份\n- **NovaFlow**:NovaTech 的核心云平台产品,含应用托管、数据管道、智能告警三大模块。\n\n## 第二周建议完成\n- 与带教导师结对完成一次代码走查;\n- 参加一次部门周会并提交会议纪要;\n- 熟悉《术语表》,掌握 NF-ID、POD 等内部常用概念。\n\n## 账号与信息安全\n- 入职后由 IT 部门统一开通企业账号,初始密码需在首次登录后修改。",
+      "confidence": 0.60712,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-prod-02",
+          "chunk_id": "doc-prod-02-1",
+          "quote": "## 平台与身份\n- **NovaFlow**:NovaTech 的核心云平台产品,含应用托管、数据管道、智能告警三大模块。"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-hr-02",
+          "chunk_id": "doc-hr-02-2",
+          "quote": "## 第二周建议完成\n- 与带教导师结对完成一次代码走查;\n- 参加一次部门周会并提交会议纪要;\n- 熟悉《术语表》,掌握 NF-ID、POD 等内部常用概念。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-hr-01",
+          "chunk_id": "doc-hr-01-3",
+          "quote": "## 账号与信息安全\n- 入职后由 IT 部门统一开通企业账号,初始密码需在首次登录后修改。"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-prod-02-1",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.60712
+        },
+        {
+          "chunk_id": "doc-hr-02-2",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.032002,
+          "rerank_score": null,
+          "vec_score": 0.452437
+        },
+        {
+          "chunk_id": "doc-hr-01-3",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.031754,
+          "rerank_score": null,
+          "vec_score": 0.545927
+        },
+        {
+          "chunk_id": "doc-prod-03-2",
+          "doc_id": "doc-prod-03",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": null,
+          "vec_score": 0.446175
+        },
+        {
+          "chunk_id": "doc-it-02-1",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.030769,
+          "rerank_score": null,
+          "vec_score": 0.409785
+        },
+        {
+          "chunk_id": "doc-tech-03-1",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.029857,
+          "rerank_score": null,
+          "vec_score": 0.369588
+        },
+        {
+          "chunk_id": "doc-prod-01-0",
+          "doc_id": "doc-prod-01",
+          "source": "hybrid",
+          "score": 0.029644,
+          "rerank_score": null,
+          "vec_score": 0.359529
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.029631,
+          "rerank_score": null,
+          "vec_score": 0.364713
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [
+          "NovaFlow ID 的缩写",
+          "统一身份标识",
+          "单点登录办公门户/邮箱/VPN/NovaFlow 控制台等内部系统"
+        ],
+        "total": 3
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C10",
+      "category": "专业术语",
+      "query": "POD 是什么流程?",
+      "expected_behavior": "answer",
+      "expected_answer_points": [
+        "Publish On Demand,按需发布流程",
+        "拆解为构建→灰度→全量三个阶段"
+      ],
+      "no_answer": false,
+      "answer": "## 什么是 POD\nPOD(Publish On Demand)是 NovaTech 的**按需发布流程**,将发布拆解为「构建 → 灰度 → 全量」三个阶段,发布人凭 CCR 工单按需触发,不再依赖固定周发布窗口。\n\n## Q5:代码怎么发布到生产?\n\n## 研发流程\n- **POD**:Publish On Demand 的缩写,即**按需发布流程**。",
+      "confidence": 0.753171,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-tech-03",
+          "chunk_id": "doc-tech-03-1",
+          "quote": "## 什么是 POD\nPOD(Publish On Demand)是 NovaTech 的**按需发布流程**,将发布拆解为「构建 → 灰度 → 全量」三个阶段,发布人凭 CCR 工单按需触发,不再依赖固定周发布窗口。"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-prod-04",
+          "chunk_id": "doc-prod-04-5",
+          "quote": "## Q5:代码怎么发布到生产?"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-prod-02",
+          "chunk_id": "doc-prod-02-2",
+          "quote": "## 研发流程\n- **POD**:Publish On Demand 的缩写,即**按需发布流程**。"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-tech-03-1",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.032266,
+          "rerank_score": null,
+          "vec_score": 0.753171
+        },
+        {
+          "chunk_id": "doc-prod-04-5",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.032266,
+          "rerank_score": null,
+          "vec_score": 0.581471
+        },
+        {
+          "chunk_id": "doc-prod-02-2",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.032258,
+          "rerank_score": null,
+          "vec_score": 0.670446
+        },
+        {
+          "chunk_id": "doc-tech-03-0",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.03101,
+          "rerank_score": null,
+          "vec_score": 0.531709
+        },
+        {
+          "chunk_id": "doc-hr-02-2",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.03101,
+          "rerank_score": null,
+          "vec_score": 0.465463
+        },
+        {
+          "chunk_id": "doc-prod-02-1",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.029437,
+          "rerank_score": null,
+          "vec_score": 0.446319
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.02904,
+          "rerank_score": null,
+          "vec_score": 0.393558
+        },
+        {
+          "chunk_id": "doc-tech-02-0",
+          "doc_id": "doc-tech-02",
+          "source": "hybrid",
+          "score": 0.027693,
+          "rerank_score": null,
+          "vec_score": 0.409045
+        }
+      ],
+      "point_precheck": {
+        "covered": [
+          "拆解为构建→灰度→全量三个阶段"
+        ],
+        "missing": [
+          "Publish On Demand,按需发布流程"
+        ],
+        "total": 2
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C11",
+      "category": "知识库无答案",
+      "query": "公司有宠物寄养福利吗?",
+      "expected_behavior": "refuse",
+      "expected_answer_points": [],
+      "no_answer": true,
+      "answer": null,
+      "confidence": 0.47478,
+      "citations": [],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-01-1",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.032522,
+          "rerank_score": null,
+          "vec_score": 0.47478
+        },
+        {
+          "chunk_id": "doc-proj-01-4",
+          "doc_id": "doc-proj-01",
+          "source": "hybrid",
+          "score": 0.031319,
+          "rerank_score": null,
+          "vec_score": 0.44453
+        },
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.03055,
+          "rerank_score": null,
+          "vec_score": 0.456103
+        },
+        {
+          "chunk_id": "doc-prod-02-0",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.029031,
+          "rerank_score": null,
+          "vec_score": 0.425502
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.026901,
+          "rerank_score": null,
+          "vec_score": 0.406198
+        },
+        {
+          "chunk_id": "doc-hr-01-2",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.016129,
+          "rerank_score": null,
+          "vec_score": 0.472498
+        },
+        {
+          "chunk_id": "doc-hr-02-3",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.015873,
+          "rerank_score": null,
+          "vec_score": 0.459878
+        },
+        {
+          "chunk_id": "doc-prod-04-2",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.015625,
+          "rerank_score": null,
+          "vec_score": null
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [],
+        "total": 0
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C12",
+      "category": "知识库无答案",
+      "query": "出差住宿费标准是多少?",
+      "expected_behavior": "refuse",
+      "expected_answer_points": [],
+      "no_answer": true,
+      "answer": null,
+      "confidence": 0.555379,
+      "citations": [],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-01-2",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.031778,
+          "rerank_score": null,
+          "vec_score": 0.518407
+        },
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.028629,
+          "rerank_score": null,
+          "vec_score": 0.3805
+        },
+        {
+          "chunk_id": "doc-hr-04-1",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.016393,
+          "rerank_score": null,
+          "vec_score": 0.555379
+        },
+        {
+          "chunk_id": "doc-hr-03-1",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.016129,
+          "rerank_score": null,
+          "vec_score": 0.542967
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.015873,
+          "rerank_score": null,
+          "vec_score": 0.533977
+        },
+        {
+          "chunk_id": "doc-hr-04-0",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.015625,
+          "rerank_score": null,
+          "vec_score": 0.524294
+        },
+        {
+          "chunk_id": "doc-hr-03-0",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.015152,
+          "rerank_score": null,
+          "vec_score": 0.501722
+        },
+        {
+          "chunk_id": "doc-hr-05-3",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.014925,
+          "rerank_score": null,
+          "vec_score": 0.48355
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [],
+        "total": 0
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C13",
+      "category": "文档冲突",
+      "query": "市内交通费每天报销上限是多少?",
+      "expected_behavior": "conflict",
+      "expected_answer_points": [
+        "2024 版:每日上限 100 元",
+        "2026 版:每日上限 150 元",
+        "并列呈现双方来源,不替用户选边"
+      ],
+      "no_answer": false,
+      "answer": "## 市内交通费\n- 员工因公产生的市内交通费(地铁、公交)实报实销。\n\n## 市内交通费\n- 员工因公产生的市内交通费(地铁、公交、共享单车)实报实销。\n\n## Q4:报销多久能到账?",
+      "confidence": 0.762053,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-hr-03",
+          "chunk_id": "doc-hr-03-1",
+          "quote": "## 市内交通费\n- 员工因公产生的市内交通费(地铁、公交)实报实销。"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-hr-04",
+          "chunk_id": "doc-hr-04-1",
+          "quote": "## 市内交通费\n- 员工因公产生的市内交通费(地铁、公交、共享单车)实报实销。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-prod-04",
+          "chunk_id": "doc-prod-04-4",
+          "quote": "## Q4:报销多久能到账?"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-03-1",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.762053
+        },
+        {
+          "chunk_id": "doc-hr-04-1",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.032258,
+          "rerank_score": null,
+          "vec_score": 0.748789
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": null,
+          "vec_score": 0.580079
+        },
+        {
+          "chunk_id": "doc-hr-04-3",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.030798,
+          "rerank_score": null,
+          "vec_score": 0.600763
+        },
+        {
+          "chunk_id": "doc-hr-03-2",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.03055,
+          "rerank_score": null,
+          "vec_score": 0.520154
+        },
+        {
+          "chunk_id": "doc-hr-03-3",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.030536,
+          "rerank_score": null,
+          "vec_score": 0.552868
+        },
+        {
+          "chunk_id": "doc-hr-04-2",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.030536,
+          "rerank_score": null,
+          "vec_score": 0.523319
+        },
+        {
+          "chunk_id": "doc-hr-04-0",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.028992,
+          "rerank_score": null,
+          "vec_score": 0.515768
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [
+          "2024 版:每日上限 100 元",
+          "2026 版:每日上限 150 元",
+          "并列呈现双方来源,不替用户选边"
+        ],
+        "total": 3
+      },
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C14",
+      "category": "文档冲突",
+      "query": "报销凭证需要保留多久?",
+      "expected_behavior": "conflict",
+      "expected_answer_points": [
+        "2024 版:保留 6 个月",
+        "2026 版:保留 2 年",
+        "并列呈现双方来源,不替用户选边"
+      ],
+      "no_answer": false,
+      "answer": "## 报销凭证\n- 所有报销需保留原始票据(发票或电子行程单)。\n\n## 报销凭证\n- 所有报销需保留原始票据(发票或电子行程单),电子发票优先。\n\n## Q4:报销多久能到账?",
+      "confidence": 0.821344,
+      "citations": [
+        {
+          "index": 1,
+          "doc_id": "doc-hr-03",
+          "chunk_id": "doc-hr-03-2",
+          "quote": "## 报销凭证\n- 所有报销需保留原始票据(发票或电子行程单)。"
+        },
+        {
+          "index": 2,
+          "doc_id": "doc-hr-04",
+          "chunk_id": "doc-hr-04-2",
+          "quote": "## 报销凭证\n- 所有报销需保留原始票据(发票或电子行程单),电子发票优先。"
+        },
+        {
+          "index": 3,
+          "doc_id": "doc-prod-04",
+          "chunk_id": "doc-prod-04-4",
+          "quote": "## Q4:报销多久能到账?"
+        }
+      ],
+      "conflicts": null,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-03-2",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": null,
+          "vec_score": 0.821344
+        },
+        {
+          "chunk_id": "doc-hr-04-2",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.032258,
+          "rerank_score": null,
+          "vec_score": 0.81165
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": null,
+          "vec_score": 0.641429
+        },
+        {
+          "chunk_id": "doc-hr-04-3",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.031025,
+          "rerank_score": null,
+          "vec_score": 0.651883
+        },
+        {
+          "chunk_id": "doc-hr-03-3",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.030769,
+          "rerank_score": null,
+          "vec_score": 0.628132
+        },
+        {
+          "chunk_id": "doc-hr-04-1",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.030331,
+          "rerank_score": null,
+          "vec_score": 0.526182
+        },
+        {
+          "chunk_id": "doc-hr-04-0",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.029644,
+          "rerank_score": null,
+          "vec_score": 0.549472
+        },
+        {
+          "chunk_id": "doc-hr-03-1",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.02901,
+          "rerank_score": null,
+          "vec_score": 0.516203
+        }
+      ],
+      "point_precheck": {
+        "covered": [],
+        "missing": [
+          "2024 版:保留 6 个月",
+          "2026 版:保留 2 年",
+          "并列呈现双方来源,不替用户选边"
+        ],
+        "total": 3
+      },
+      "skipped": false,
+      "error": null
+    }
+  ],
+  "skipped": 0
+}
