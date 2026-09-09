@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET as getDocuments } from "@/app/api/documents/route";
 import { DELETE as deleteDocumentRoute } from "@/app/api/documents/[id]/route";
 import { POST as postReindex } from "@/app/api/documents/[id]/reindex/route";
+import { GET as getEvalRunRoute } from "@/app/api/eval/runs/[id]/route";
 import { POST as postAsk } from "@/app/api/ask/route";
 import { POST as postIngest } from "@/app/api/ingest/route";
 import { POST as postFeedback } from "@/app/api/qa/[id]/feedback/route";
@@ -14,11 +15,14 @@ import {
   ApiError,
   askQuestion,
   deleteDocument,
+  getEvalRun,
   listDocuments,
+  listEvalRuns,
   proxyToRag,
   RAG_BASE_URL,
   reindexDocument,
   sendFeedback,
+  startEvalRun,
   uploadDocument,
 } from "@/lib/rag";
 
@@ -390,6 +394,108 @@ describe("typed client 文档管理(3.3.3)", () => {
       name: "ApiError",
       status: 500,
       message: "源文件不存在",
+    });
+  });
+});
+
+const EVAL_SUMMARY = {
+  run_id: "run-1",
+  mode: "vector",
+  params_hash: "abc123def4567890",
+  doc_commit: "abc1234",
+  created_at: "2026-09-10T08:00:00+00:00",
+  status: "completed",
+  metrics: { hit_at_5: { hits: 12, total: 12 }, mrr: 0.9583 },
+  has_per_case: true,
+};
+
+const EVAL_PER_CASE = [
+  {
+    case_id: "C01",
+    category: "假期制度",
+    query: "年假有几天?",
+    expected_behavior: "answer",
+    expected_doc_ids: ["doc-hr-05"],
+    in_metrics: true,
+    hits: [],
+    rank_of_first_expected: 1,
+    hit: true,
+    rr: 1.0,
+    skipped: false,
+    error: null,
+  },
+];
+
+describe("评测 BFF 路由与 typed client(3.3.4)", () => {
+  it("GET /api/eval/runs/:id 转发带 run_id", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ ...EVAL_SUMMARY, per_case: EVAL_PER_CASE }),
+    );
+    const response = await getEvalRunRoute(
+      new Request("http://localhost:3001/api/eval/runs/run-1"),
+      { params: Promise.resolve({ id: "run-1" }) },
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${RAG_BASE_URL}/api/eval/runs/run-1`);
+    expect(init.method).toBe("GET");
+  });
+
+  it("listEvalRuns:GET /api/eval/runs 解析 runs 数组;失败 → ApiError", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ runs: [EVAL_SUMMARY] }),
+    );
+    const result = await listEvalRuns();
+    expect(result).toHaveLength(1);
+    expect(result[0].metrics).toEqual({ hit_at_5: { hits: 12, total: 12 }, mrr: 0.9583 });
+    expect(mock).toHaveBeenCalledWith("/api/eval/runs");
+
+    stubFetch(async () => jsonResponse({ error: "数据库错误" }, 500));
+    await expect(listEvalRuns()).rejects.toMatchObject({
+      name: "ApiError",
+      status: 500,
+      message: "数据库错误",
+    });
+  });
+
+  it("startEvalRun:POST /api/eval/run 解析 202 响应;409 → ApiError(可读信息)", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse(
+        { run_ids: ["run-a", "run-b", "run-c"], created_at: "2026-09-10T08:00:00+00:00" },
+        202,
+      ),
+    );
+    const result = await startEvalRun();
+    expect(result.run_ids).toHaveLength(3);
+    expect(mock).toHaveBeenCalledWith(
+      "/api/eval/run",
+      expect.objectContaining({ method: "POST" }),
+    );
+
+    stubFetch(async () =>
+      jsonResponse({ error: "已有评测正在运行,请等待完成" }, 409),
+    );
+    await expect(startEvalRun()).rejects.toMatchObject({
+      name: "ApiError",
+      status: 409,
+      message: "已有评测正在运行,请等待完成",
+    });
+  });
+
+  it("getEvalRun:GET /api/eval/runs/:id 解析明细含 per_case;404 → ApiError", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ ...EVAL_SUMMARY, per_case: EVAL_PER_CASE }),
+    );
+    const detail = await getEvalRun("run-1");
+    expect(detail.per_case).toHaveLength(1);
+    expect(detail.per_case?.[0].case_id).toBe("C01");
+    expect(mock).toHaveBeenCalledWith("/api/eval/runs/run-1");
+
+    stubFetch(async () => jsonResponse({ error: "评测运行不存在" }, 404));
+    await expect(getEvalRun("run-ghost")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+      message: "评测运行不存在",
     });
   });
 });

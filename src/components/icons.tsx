@@ -122,6 +122,14 @@ export function IconUpload(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconPlay(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M4.5 3.2l8 4.8-8 4.8z" />
+    </Base>
+  );
+}
+
 export function IconTrash(props: SVGProps<SVGSVGElement>) {
   return (
     <Base {...props}>

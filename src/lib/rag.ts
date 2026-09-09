@@ -256,3 +256,102 @@ export async function reindexDocument(id: string): Promise<IngestResponse> {
   }
   return body as IngestResponse;
 }
+
+/* ── /api/eval 评测(3.3.4:运行/列表/明细;指标只来自 run 结果,禁止虚构)── */
+
+export type EvalRunStatus = "running" | "completed" | "failed";
+
+/** 指标口径:completed 行 = hit_at_5 + mrr;failed 行 = {error}。 */
+export type EvalMetrics = { hit_at_5: { hits: number; total: number }; mrr: number };
+
+export interface EvalRunSummary {
+  run_id: string;
+  mode: string;
+  params_hash: string;
+  doc_commit: string;
+  created_at: string;
+  status: EvalRunStatus;
+  metrics: EvalMetrics | { error?: string };
+  has_per_case: boolean;
+}
+
+export interface EvalCaseHit {
+  chunk_id: string;
+  doc_id: string;
+  source: string;
+  score: number;
+  rerank_score: number | null;
+  vec_score: number | null;
+}
+
+export interface EvalCaseDetail {
+  case_id: string;
+  category: string;
+  query: string;
+  expected_behavior: string;
+  expected_doc_ids: string[];
+  in_metrics: boolean;
+  hits: EvalCaseHit[];
+  rank_of_first_expected: number | null;
+  hit: boolean | null;
+  rr: number | null;
+  skipped: boolean;
+  error: string | null;
+}
+
+export interface EvalRunDetail extends EvalRunSummary {
+  per_case?: EvalCaseDetail[];
+}
+
+export interface StartEvalResponse {
+  run_ids: string[];
+  created_at: string;
+}
+
+/** 全部评测运行摘要(新批次在前;同批三行 created_at 相同,前端按批聚合)。 */
+export async function listEvalRuns(): Promise<EvalRunSummary[]> {
+  const response = await fetch("/api/eval/runs");
+  const body = (await response.json().catch(() => null)) as
+    | { runs: EvalRunSummary[] }
+    | { error?: string }
+    | null;
+  if (!response.ok || !body || !("runs" in body)) {
+    throw new ApiError(
+      response.status,
+      (body as { error?: string } | null)?.error ?? "评测记录加载失败,请稍后重试",
+    );
+  }
+  return body.runs;
+}
+
+/** 启动三模式评测(POST /api/eval/run,后台约数分钟;运行中再点 → 409)。 */
+export async function startEvalRun(): Promise<StartEvalResponse> {
+  const response = await fetch("/api/eval/run", { method: "POST" });
+  const body = (await response.json().catch(() => null)) as
+    | StartEvalResponse
+    | { error?: string }
+    | null;
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      (body as { error?: string } | null)?.error ?? "启动评测失败,请稍后重试",
+    );
+  }
+  return body as StartEvalResponse;
+}
+
+/** 单次运行明细(逐例 per_case,RunList 展开用;历史 CLI 批次无明细)。 */
+export async function getEvalRun(runId: string): Promise<EvalRunDetail> {
+  const response = await fetch(`/api/eval/runs/${encodeURIComponent(runId)}`);
+  const body = (await response.json().catch(() => null)) as
+    | EvalRunDetail
+    | { error?: string }
+    | null;
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      (body as { error?: string } | null)?.error ?? "评测明细加载失败,请稍后重试",
+    );
+  }
+  return body as EvalRunDetail;
+}
