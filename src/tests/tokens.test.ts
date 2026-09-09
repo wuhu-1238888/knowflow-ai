@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -135,5 +135,54 @@ describe("L1 token 对拍:全局基础样式", () => {
 
   it("prefers-reduced-motion 存在(DesignRules 动效预算)", () => {
     expect(THEME).toContain("prefers-reduced-motion");
+  });
+});
+
+describe("L1 token 对拍:containers(页面容器宽度)", () => {
+  const containers = sectionLeaves("containers");
+  const SHELL = readFileSync(
+    path.join(ROOT, "src", "components", "shell", "app-shell.tsx"),
+    "utf8",
+  );
+
+  /** 递归列出目录下全部文件路径(用于全 src 残留扫描)。 */
+  function filesUnder(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      if (statSync(full).isDirectory()) {
+        out.push(...filesUnder(full));
+      } else {
+        out.push(full);
+      }
+    }
+    return out;
+  }
+
+  it("containers section 三档齐全且都落在 4px 网格", () => {
+    expect(Object.keys(containers).sort()).toEqual([
+      "content-qa",
+      "content-reading",
+      "content-wide",
+    ]);
+    for (const value of Object.values(containers)) {
+      expect(Number(value) % 4).toBe(0);
+    }
+  });
+
+  it("app-shell.tsx 逐值映射全部容器 token(max-w-[{value}px])", () => {
+    for (const value of Object.values(containers)) {
+      expect(SHELL).toContain(`max-w-[${value}px]`);
+    }
+  });
+
+  it("旧全局 760px 上限已从 src 生产代码移除(测试文件除外)", () => {
+    const hits = filesUnder(path.join(ROOT, "src")).filter(
+      (f) =>
+        /\.(ts|tsx|css)$/.test(f) &&
+        !f.includes(".test.") &&
+        readFileSync(f, "utf8").includes("max-w-[760px]"),
+    );
+    expect(hits).toEqual([]);
   });
 });

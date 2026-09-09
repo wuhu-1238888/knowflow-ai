@@ -51,7 +51,7 @@ export default function AskPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="知识问答" />
+      <PageHeader title="知识问答" subtitle="企业知识助手,基于企业知识库回答问题" />
 
       <div className="flex flex-col gap-2">
         <AskTextarea

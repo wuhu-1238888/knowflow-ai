@@ -78,6 +78,13 @@ describe("AskPage idle 态", () => {
     expect(screen.queryByText("混合+重排")).toBeNull();
     expect(screen.queryByText("向量")).toBeNull();
   });
+
+  it("页头标题「知识问答」带一行克制的副标题", () => {
+    render(<AskPage />);
+    expect(
+      screen.getByText("企业知识助手,基于企业知识库回答问题"),
+    ).toBeTruthy();
+  });
 });
 
 describe("AskPage 回答流", () => {
