@@ -33,6 +33,9 @@ class SearchHit:
     score: float
     source: str  # vector | keyword | hybrid
     rerank_score: float | None = None
+    # hybrid 模式的拒答分数口径:该候选在向量路的余弦分(RRF 分数无绝对语义不可阈值化,
+    # 3.2.6 管线消费;仅来自向量路的候选有值,纯 keyword 命中为 None)
+    vec_score: float | None = None
 
 
 class Reranker(Protocol):
@@ -89,7 +92,14 @@ class RetrievalService:
     def _table(self):
         return self._index._ensure_table()
 
-    def _to_hit(self, row: dict, source: str, score: float, rerank_score: float | None = None) -> SearchHit:
+    def _to_hit(
+        self,
+        row: dict,
+        source: str,
+        score: float,
+        rerank_score: float | None = None,
+        vec_score: float | None = None,
+    ) -> SearchHit:
         return SearchHit(
             chunk_id=row["chunk_id"],
             doc_id=row["doc_id"],
@@ -97,6 +107,7 @@ class RetrievalService:
             score=round(float(score), 6),
             source=source,
             rerank_score=round(float(rerank_score), 6) if rerank_score is not None else None,
+            vec_score=round(float(vec_score), 6) if vec_score is not None else None,
         )
 
     def _vector(self, query: str, top_k: int) -> list[SearchHit]:
@@ -131,7 +142,7 @@ class RetrievalService:
             return []
         ordered = sorted(scores, key=lambda cid: (-scores[cid], vec_rank.index(cid) if cid in vec_rank else len(vec_rank)))
         return [
-            self._to_hit(by_id[cid], "hybrid", scores[cid])
+            self._to_hit(by_id[cid], "hybrid", scores[cid], vec_score=self._vec_score(by_id[cid]))
             for cid in ordered[:top_k]
         ]
 
@@ -151,9 +162,16 @@ class RetrievalService:
             zip(candidates, rerank_scores), key=lambda pair: -pair[1]
         )
         return [
-            self._to_hit(by_id[cid], "hybrid", scores[cid], rs)
+            self._to_hit(by_id[cid], "hybrid", scores[cid], rs, vec_score=self._vec_score(by_id[cid]))
             for cid, rs in combined[:top_k]
         ]
+
+    @staticmethod
+    def _vec_score(row: dict) -> float | None:
+        """行来自向量路(_distance 存在)时给出余弦分;纯 keyword 命中无值。"""
+        if "_distance" in row:
+            return 1.0 - row["_distance"]
+        return None
 
     def _candidate_ranks(self, query: str, top_k: int) -> tuple[list[str], list[str], dict]:
         """两路各取 top_k*CANDIDATE_FACTOR 候选,返回 (向量排名, 全文排名, id→行)。"""
@@ -174,5 +192,6 @@ class RetrievalService:
                 self._table().search(query, query_type="fts").limit(limit).to_list()
             )
             fts_rank = [r["chunk_id"] for r in fts_rows]
-        by_id = {r["chunk_id"]: r for r in vec_rows + fts_rows}
+        # 向量行后写入优先:同 chunk 两路都命中时保留带 _distance 的行(vec_score 口径)
+        by_id = {r["chunk_id"]: r for r in fts_rows + vec_rows}
         return vec_rank, fts_rank, by_id

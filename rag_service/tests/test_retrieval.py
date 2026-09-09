@@ -157,3 +157,14 @@ def test_hit_shape(service):
     assert isinstance(hit, SearchHit)
     assert hit.chunk_id and hit.doc_id and hit.text
     assert isinstance(hit.score, float)
+
+
+def test_hybrid_hits_carry_vec_score(service):
+    """hybrid 命中来自向量路的候选携带 vec_score(余弦分),供 3.2.6 拒答阈值用。"""
+    hits = service.search("报销票据", mode="hybrid", top_k=3)
+    with_vec = [h for h in hits if h.vec_score is not None]
+    assert len(with_vec) == len(hits)  # 3 篇文档全部会被向量路覆盖(候选池 24)
+    assert all(0.0 <= h.vec_score <= 1.0 for h in with_vec)
+    # hybrid_rerank 同样携带
+    rr_hits = service.search("请假", mode="hybrid_rerank", top_k=3)
+    assert all(h.vec_score is not None for h in rr_hits)
