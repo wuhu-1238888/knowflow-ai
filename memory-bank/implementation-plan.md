@@ -175,7 +175,7 @@
 - 验证:L3 上传成功/解析失败徽标分支、删除确认弹窗;L2 集成:ingest→状态流转(parsing→indexed/failed);FR-09 验收:删除后 doc 数减 1 且检索不再命中、重建后恢复
 - 产出物:文档库页、测试
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit 见 progress Round 5)。** 交付:后端文档管理四端点——`GET /api/documents?page=&page_size=`(分页 + chunk_count 读 SQLite,source_path 不外泄)、`POST /api/ingest`(multipart 同步解析索引,400 不支持格式/空文件,422 解析失败落 failed 行)、`DELETE /api/documents/{id}`(Lance 向量 + 元数据级联删除,仅清理 uploads/ 内源文件)、`POST /api/documents/{id}/reindex`;BFF 三路由(列表透传分页 / ingest multipart / reindex);前端文档库页——UploadZone(5 格式校验/点击+键盘+拖拽/无 OCR 说明/禁用态)、DocumentTable(标题/格式徽标/状态徽标 4 态/分块数/上传时间/操作)、上传中 = 表格行内乐观行(无全局遮罩)、DocStatusBadge、ConfirmModal(danger 二次确认,遮罩/Esc/取消关闭,处理中锁定)、骨架/空态/错误态;rag.ts client 4 函数;index_docs 回填 chunks 落库(分块数不加载向量库)。测试:后端 pytest 141/141(新增 test_api_documents.py 9 例,含 FR-09 删除后 hybrid 检索不再命中/重传恢复)、前端 vitest 114/114(新增 page.test 11 + upload-zone 8 + confirm-modal 6 + rag.test 10)、typecheck 干净。附带修复:upsert_document `INSERT OR REPLACE` → `ON CONFLICT DO UPDATE`(修复外键级联删除清空 chunks 的 bug)。偏差记录:①上传同步解析,未强制单独 60s 上限(BFF 120s 全局超时兜底);②列表 UI 单页拉全(page_size=100,分页 UI 未做,演示规模充足);③解析失败详细错误仅会话内保留(持久形态 = failed 行 + 重建索引重试);④UI 四态(含待索引)与库三态(parsing/indexed/failed)映射:待索引 = 上传瞬间 UI 兜底态,库不扩字段(沿用 3.1.3 偏差记录 ③ 的决策)。
 
 ### 任务 3.3.4 评测页(指标矩阵 + 运行历史)
 - 做什么:运行评测按钮(primary,运行中禁用+Skeleton);EvalMatrix(行=三模式,列=7 类场景+Hit@5+MRR,数字全 numeric token;混合+重排行 surface-2 底 + 达标徽标;其余行「记录值」caption);RunList(run_id/params_hash/doc_commit 截断/时间/指标/状态徽标,点击展开 per-case 明细);数据来源页脚 caption(run-id + params_hash)

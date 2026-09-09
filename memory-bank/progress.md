@@ -4,7 +4,7 @@
 > 对应:执行期持续维护(执行日志)
 
 <!-- 头部:测试基线,随任务更新 -->
-- 测试基线:后端 pytest 132/132 + 前端 vitest 79/79(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏 + 3.3.2 全量交互补齐后全绿,2026-09-09)
+- 测试基线:后端 pytest 141/141 + 前端 vitest 114/114(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏 + 3.3.2 全量交互补齐 + 3.3.3 文档库页后全绿,2026-09-09)
 
 ## Round 1:Stage 01–08 文档阶段完成表
 
@@ -98,6 +98,7 @@
 | 布局修订 | 页面容器宽度分档 + 问答页克制副标题 | 已完成(2026-09-09 人拍板「宽幅居中 + max-width 封顶」;前端 vitest 58/58 绿) | (见下) |
 | 布局修订 2 | 问答页垂直节奏(顶部呼吸空间 + 区块间距统一) | 已完成(2026-09-09 人拍板;前端 vitest 59/59 绿) | (见下) |
 | 3.3.2 全量 | 引用 chip / 双向证据联动 / 来源抽屉 / 重新生成 / 有用·无用(FR-11/FR-12) | 已完成(后端 pytest 132/132 + 前端 vitest 79/79 绿;typecheck 干净) | (见下) |
+| 3.3.3 | 文档库页(上传/列表/删除确认/重建索引) | 已完成(后端 pytest 141/141 + 前端 vitest 114/114 绿;typecheck 干净) | (见下) |
 
 ### M3 首批任务记录(2026-09-09,依据人「继续下一步吧」启动)
 
@@ -138,6 +139,15 @@
 - **测试**:后端 pytest 132/132;前端 vitest 79/79(新增:rag.test 反馈 BFF 转发 2 + sendFeedback client 2、answer-sheet.test 全量重写 17、page.test 回答堆叠/加载保留/页面反馈 3);typecheck 干净。L4 走查待人操作(qa-guide v0.5)。
 - **下一步**:3.3.3 文档库页 → 3.3.4 评测页全量(运行按钮/运行历史/动态数据)→ 3.3.5 关于页。
 
+### 3.3.3 文档库页记录(2026-09-09)
+
+- **后端(文档管理四端点)**:`GET /api/documents?page=&page_size=`(分页 + chunk_count 读 SQLite,source_path 不外泄);`POST /api/ingest`(multipart 上传 → uploads/ 落盘 → 同步解析索引;400 不支持格式/空文件;422 解析失败落 failed 行供重建索引);`DELETE /api/documents/{doc_id}`(Lance 向量 + 元数据级联删除,仅清理 uploads/ 内源文件);`POST /api/documents/{doc_id}/reindex`(按源文件重解析重索引)。index_docs 回填 chunks 落库(文档表格分块数不加载向量库)。**附带修复**:upsert_document `INSERT OR REPLACE` → `ON CONFLICT DO UPDATE`——原实现内部先 DELETE 父行,`foreign_keys=ON` 下级联清空 chunks(见已解决问题 #4)。测试:test_api_documents.py 9 例新建(含 FR-09:删除后 hybrid 检索不再命中、重传恢复),pytest 141/141。
+- **前端(文档库页)**:UploadZone(5 格式校验/点击+键盘+拖拽三通道/无 OCR 说明/禁用态);DocumentTable(标题/格式徽标/状态徽标 4 态/分块数/上传时间/操作);上传中 = 表格行内乐观行(待索引徽标 + 解析中说明,无全局遮罩);DocStatusBadge(已索引 success/解析中 info/解析失败 danger/待索引 neutral);ConfirmModal(danger 二次确认,遮罩/Esc/取消三通道关闭,处理中锁定);删除/重建索引 icon ghost 按钮(人显式触发);骨架脉动/空态/列表失败错误态。BFF 新增 `POST /api/documents/:id/reindex` 路由。测试:page.test 11 例 + upload-zone 8 例 + confirm-modal 6 例 + rag.test 文档管理 10 例,前端 vitest 114/114、typecheck 干净。
+- **实机双链路(2026-09-09)**:GET /api/documents 8000 与 3001 均 20 篇、chunk_count 齐全、source_path 无泄露;multipart 上传 8000/3001 均 200 → 列表 21(synthetic=0);reindex 200;DELETE 8000/3001 均 200 → 列表回 20;**FR-09 实测**:上传后提问「公司咖啡吧可以免费喝咖啡吗?」→ 命中上传文档(0.9775),删除后再问同一问题 → no_answer=True、0 引用;422 纯注释 html → failed 行出现在列表;400 .png 拒绝;测试残留(failed 行/临时文件)已清理,最终 20 篇。
+- **偏差记录**:①上传同步解析,未强制单独 60s 上限(BFF 120s 全局超时兜底);②列表 UI 单页拉全(page_size=100,分页 UI 未做,演示规模充足);③解析失败详细错误仅会话内保留(刷新后只剩 failed 行,重建索引重试);④UI 四态(含待索引)与库三态(parsing/indexed/failed)映射:待索引 = 上传瞬间 UI 兜底态,库不扩字段(沿用 3.1.3 偏差记录 ③)。
+- **L4 走查**:待人操作(qa-guide-3.3.3.md)。
+- **下一步**:3.3.4 评测页全量(运行按钮/运行历史/动态数据)→ 3.3.5 关于页 → 3.4.1 端到端演示闭环。
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->
@@ -157,13 +167,14 @@
 | 1 | pip 安装报 UnicodeDecodeError(gbk) | requirements.txt 含中文注释,pip 在中文 Windows 以 GBK 解码 UTF-8 失败 | 依赖清单注释改纯 ASCII(2026-09-09,任务 3.1.1) |
 | 2 | Vitest 5 不解 TSX(jsx: "preserve") | Next.js 要求 tsconfig jsx=preserve,Vitest 5(rolldown)不转换 JSX,import-analysis 报语法错 | 新增 devDependency @vitejs/plugin-react(Babel 转换)+ 未开 globals 时显式 cleanup 注册(2026-09-09,任务 3.1.2) |
 | 3 | Vitest 与 Next dev 缓存目录冲突 | 两者共用 `node_modules/.vite`,dev server 运行中反复出现 "Vitest failed to find the current suite"(setup.ts 语境丢失),清缓存只解一次 | vitest.config.ts 设 Vite `cacheDir: node_modules/.vitest` 与 Next 分离;双连跑验证稳定(2026-09-09) |
+| 4 | ingest 成功后 repo 分块数为 0(响应 chunk_count=1 但 SQLite 空) | `INSERT OR REPLACE` 内部先 DELETE 父行再插入,`PRAGMA foreign_keys=ON` 下级联删除 chunks——每次 parsing→indexed 状态回写都清掉刚写入的分块 | upsert_document 改 `INSERT ... ON CONFLICT(id) DO UPDATE SET`;test_api_documents 9 例全量覆盖状态回写路径(2026-09-09,任务 3.3.3) |
 
 ## 未解决的问题(遗留,编号滚动)
 
 | # | 问题 | 影响范围 | 处置计划 | 状态 |
 | --- | --- | --- | --- | --- |
 | 1 | 真实 LLM Key 未验证 | RAG 生成链路 | Mock 先行开发;真实 Key 到位后重跑同一样例集(L5 真实模型补充验证);**M2b 挂账两线(要点覆盖率 ≥90%、冲突检测 2/2)与幻觉真检验一并在此重跑验收**(2026-09-09 M2b 带遗留通过时明确) | 挂账 |
-| 2 | git remote 未设置/公开与否未定 | 仓库发布 | 已解决(2026-09-08 人拍板:暂不设 remote,仅本地提交;公开决策留待后续) | 已解决 |
+| 2 | git remote 未设置/公开与否未定 | 仓库发布 | 已解决(2026-09-09:origin → github.com/wuhu-1238888/knowflow-ai 公开仓库,main 跟踪 origin/main,完整历史推送;自动提交+推送纪律入 CLAUDE.md v0.2) | 已解决 |
 | 3 | OCR/多模态文档不支持 | 文档解析范围 | 已入 vision 不做清单(MVP 边界),记录 Future Expansion | 挂账 |
 | 4 | 商业 Embedding/Reranker 未对比 | 选型完整性 | 可选:实测达标后做对照实验,不阻塞 MVP | 挂账 |
 | 5 | npm audit:next@15 传递依赖 postcss 2 个 advisories(1 moderate/1 high) | 前端依赖 | 修复需升级 next@16(破坏性变更,偏离已拍板选型)→ **待人选型裁决**;本地 demo 不暴露公网,风险低 | 挂账 |
