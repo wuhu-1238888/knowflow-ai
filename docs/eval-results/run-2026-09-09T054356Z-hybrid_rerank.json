@@ -1,0 +1,1041 @@
+{
+  "run_id": "run-c8433c06d489",
+  "mode": "hybrid_rerank",
+  "params_hash": "365740ee216243e4",
+  "doc_commit": "fe2ebd0",
+  "created_at": "2026-09-09T05:43:56+00:00",
+  "top_k": 8,
+  "per_case": [
+    {
+      "case_id": "C01",
+      "category": "精确关键词检索",
+      "query": "年假有几天?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-hr-05"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-05-1",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.833589
+        },
+        {
+          "chunk_id": "doc-hr-05-2",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.015625,
+          "rerank_score": 0.020683
+        },
+        {
+          "chunk_id": "doc-hr-05-3",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.016129,
+          "rerank_score": 0.015462
+        },
+        {
+          "chunk_id": "doc-hr-05-4",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.032002,
+          "rerank_score": 0.005988
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.013158,
+          "rerank_score": 0.003519
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.014925,
+          "rerank_score": 0.000898
+        },
+        {
+          "chunk_id": "doc-tech-02-0",
+          "doc_id": "doc-tech-02",
+          "source": "hybrid",
+          "score": 0.011905,
+          "rerank_score": 0.000426
+        },
+        {
+          "chunk_id": "doc-hr-01-2",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.015385,
+          "rerank_score": 0.000414
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C02",
+      "category": "精确关键词检索",
+      "query": "VPN 客户端在哪里下载?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-it-02"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-it-02-1",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.985044
+        },
+        {
+          "chunk_id": "doc-prod-04-2",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031514,
+          "rerank_score": 0.846092
+        },
+        {
+          "chunk_id": "doc-it-02-2",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.031281,
+          "rerank_score": 0.36108
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.015625,
+          "rerank_score": 0.007879
+        },
+        {
+          "chunk_id": "doc-it-02-3",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.031746,
+          "rerank_score": 0.005438
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.029644,
+          "rerank_score": 0.00414
+        },
+        {
+          "chunk_id": "doc-prod-02-1",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.027864,
+          "rerank_score": 0.00157
+        },
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.027973,
+          "rerank_score": 0.000854
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C03",
+      "category": "语义检索",
+      "query": "休假要提前多久申请?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-hr-05"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-05-2",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.845777
+        },
+        {
+          "chunk_id": "doc-hr-01-2",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.031514,
+          "rerank_score": 0.127229
+        },
+        {
+          "chunk_id": "doc-hr-05-3",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.016129,
+          "rerank_score": 0.078488
+        },
+        {
+          "chunk_id": "doc-hr-05-1",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.015873,
+          "rerank_score": 0.067582
+        },
+        {
+          "chunk_id": "doc-hr-05-4",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.03055,
+          "rerank_score": 0.007345
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031025,
+          "rerank_score": 0.001816
+        },
+        {
+          "chunk_id": "doc-hr-04-3",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.014706,
+          "rerank_score": 0.001391
+        },
+        {
+          "chunk_id": "doc-hr-03-2",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.013514,
+          "rerank_score": 0.00119
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C04",
+      "category": "语义检索",
+      "query": "怎么在手机上收发公司邮件?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-it-03"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.756669
+        },
+        {
+          "chunk_id": "doc-it-02-2",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.030622,
+          "rerank_score": 0.018252
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.030777,
+          "rerank_score": 0.004302
+        },
+        {
+          "chunk_id": "doc-it-02-1",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.015873,
+          "rerank_score": 0.003061
+        },
+        {
+          "chunk_id": "doc-hr-01-3",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.014286,
+          "rerank_score": 0.001344
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.030214,
+          "rerank_score": 0.001215
+        },
+        {
+          "chunk_id": "doc-prod-02-1",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.014085,
+          "rerank_score": 0.00118
+        },
+        {
+          "chunk_id": "doc-it-02-3",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.015385,
+          "rerank_score": 0.000891
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C05",
+      "category": "多文档问题",
+      "query": "入职第一周要办哪些事?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-hr-02",
+        "doc-it-01"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.031778,
+          "rerank_score": 0.987686
+        },
+        {
+          "chunk_id": "doc-hr-02-3",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.031754,
+          "rerank_score": 0.924267
+        },
+        {
+          "chunk_id": "doc-prod-04-1",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.032002,
+          "rerank_score": 0.757672
+        },
+        {
+          "chunk_id": "doc-hr-02-0",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": 0.362634
+        },
+        {
+          "chunk_id": "doc-tech-03-3",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.029857,
+          "rerank_score": 0.125537
+        },
+        {
+          "chunk_id": "doc-hr-02-2",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.014925,
+          "rerank_score": 0.121294
+        },
+        {
+          "chunk_id": "doc-hr-01-3",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.029199,
+          "rerank_score": 0.10669
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.029644,
+          "rerank_score": 0.054318
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C06",
+      "category": "多文档问题",
+      "query": "新人第一次参与代码发布要做什么?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-tech-03",
+        "doc-tech-04"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-tech-03-3",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.993064
+        },
+        {
+          "chunk_id": "doc-prod-02-2",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.031514,
+          "rerank_score": 0.802013
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.031025,
+          "rerank_score": 0.165671
+        },
+        {
+          "chunk_id": "doc-tech-03-2",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.030331,
+          "rerank_score": 0.079699
+        },
+        {
+          "chunk_id": "doc-tech-04-0",
+          "doc_id": "doc-tech-04",
+          "source": "hybrid",
+          "score": 0.031514,
+          "rerank_score": 0.042704
+        },
+        {
+          "chunk_id": "doc-prod-04-5",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.030077,
+          "rerank_score": 0.041349
+        },
+        {
+          "chunk_id": "doc-hr-02-2",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.029139,
+          "rerank_score": 0.010377
+        },
+        {
+          "chunk_id": "doc-hr-02-3",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.014085,
+          "rerank_score": 0.007093
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C07",
+      "category": "相似文档干扰",
+      "query": "打印机卡纸了怎么办?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-it-04"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-it-04-2",
+          "doc_id": "doc-it-04",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.996074
+        },
+        {
+          "chunk_id": "doc-it-04-3",
+          "doc_id": "doc-it-04",
+          "source": "hybrid",
+          "score": 0.031754,
+          "rerank_score": 0.136894
+        },
+        {
+          "chunk_id": "doc-tech-02-0",
+          "doc_id": "doc-tech-02",
+          "source": "hybrid",
+          "score": 0.03031,
+          "rerank_score": 0.06358
+        },
+        {
+          "chunk_id": "doc-prod-04-6",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.014493,
+          "rerank_score": 0.006201
+        },
+        {
+          "chunk_id": "doc-it-04-1",
+          "doc_id": "doc-it-04",
+          "source": "hybrid",
+          "score": 0.031746,
+          "rerank_score": 0.004652
+        },
+        {
+          "chunk_id": "doc-hr-04-2",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.014706,
+          "rerank_score": 0.001733
+        },
+        {
+          "chunk_id": "doc-it-04-4",
+          "doc_id": "doc-it-04",
+          "source": "hybrid",
+          "score": 0.014925,
+          "rerank_score": 0.001662
+        },
+        {
+          "chunk_id": "doc-hr-03-2",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.013889,
+          "rerank_score": 0.001554
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C08",
+      "category": "相似文档干扰",
+      "query": "怎么修改公司账号密码?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-it-01"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.659162
+        },
+        {
+          "chunk_id": "doc-hr-01-3",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.032258,
+          "rerank_score": 0.35093
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.030798,
+          "rerank_score": 0.077198
+        },
+        {
+          "chunk_id": "doc-it-02-2",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.03101,
+          "rerank_score": 0.03639
+        },
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.030579,
+          "rerank_score": 0.018661
+        },
+        {
+          "chunk_id": "doc-it-02-3",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.029469,
+          "rerank_score": 0.008489
+        },
+        {
+          "chunk_id": "doc-it-02-1",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.026876,
+          "rerank_score": 0.008191
+        },
+        {
+          "chunk_id": "doc-tech-01-1",
+          "doc_id": "doc-tech-01",
+          "source": "hybrid",
+          "score": 0.02885,
+          "rerank_score": 0.007813
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C09",
+      "category": "专业术语",
+      "query": "NF-ID 是什么?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-prod-02"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-prod-02-1",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.990196
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.029631,
+          "rerank_score": 0.871036
+        },
+        {
+          "chunk_id": "doc-it-02-1",
+          "doc_id": "doc-it-02",
+          "source": "hybrid",
+          "score": 0.030769,
+          "rerank_score": 0.78971
+        },
+        {
+          "chunk_id": "doc-hr-01-3",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.031754,
+          "rerank_score": 0.780253
+        },
+        {
+          "chunk_id": "doc-prod-01-0",
+          "doc_id": "doc-prod-01",
+          "source": "hybrid",
+          "score": 0.029644,
+          "rerank_score": 0.747486
+        },
+        {
+          "chunk_id": "doc-prod-03-2",
+          "doc_id": "doc-prod-03",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": 0.446711
+        },
+        {
+          "chunk_id": "doc-hr-02-2",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.032002,
+          "rerank_score": 0.083829
+        },
+        {
+          "chunk_id": "doc-proj-02-0",
+          "doc_id": "doc-proj-02",
+          "source": "hybrid",
+          "score": 0.028439,
+          "rerank_score": 0.000439
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C10",
+      "category": "专业术语",
+      "query": "POD 是什么流程?",
+      "expected_behavior": "answer",
+      "expected_doc_ids": [
+        "doc-prod-02"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-tech-03-1",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.032266,
+          "rerank_score": 0.985778
+        },
+        {
+          "chunk_id": "doc-prod-02-2",
+          "doc_id": "doc-prod-02",
+          "source": "hybrid",
+          "score": 0.032258,
+          "rerank_score": 0.978968
+        },
+        {
+          "chunk_id": "doc-tech-03-0",
+          "doc_id": "doc-tech-03",
+          "source": "hybrid",
+          "score": 0.03101,
+          "rerank_score": 0.860457
+        },
+        {
+          "chunk_id": "doc-prod-04-5",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.032266,
+          "rerank_score": 0.801215
+        },
+        {
+          "chunk_id": "doc-it-01-0",
+          "doc_id": "doc-it-01",
+          "source": "hybrid",
+          "score": 0.02904,
+          "rerank_score": 0.207181
+        },
+        {
+          "chunk_id": "doc-hr-02-2",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.03101,
+          "rerank_score": 0.003572
+        },
+        {
+          "chunk_id": "doc-prod-04-3",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.014493,
+          "rerank_score": 0.000794
+        },
+        {
+          "chunk_id": "doc-hr-03-3",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.014085,
+          "rerank_score": 0.000791
+        }
+      ],
+      "rank_of_first_expected": 2,
+      "hit": 1,
+      "rr": 0.5,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C11",
+      "category": "知识库无答案",
+      "query": "公司有宠物寄养福利吗?",
+      "expected_behavior": "refuse",
+      "expected_doc_ids": [],
+      "in_metrics": false,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-05-1",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.013699,
+          "rerank_score": 0.001534
+        },
+        {
+          "chunk_id": "doc-hr-01-2",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.016129,
+          "rerank_score": 0.000933
+        },
+        {
+          "chunk_id": "doc-proj-01-4",
+          "doc_id": "doc-proj-01",
+          "source": "hybrid",
+          "score": 0.031319,
+          "rerank_score": 0.000625
+        },
+        {
+          "chunk_id": "doc-hr-03-1",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.0125,
+          "rerank_score": 0.000588
+        },
+        {
+          "chunk_id": "doc-hr-04-1",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.013514,
+          "rerank_score": 0.000557
+        },
+        {
+          "chunk_id": "doc-hr-01-4",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.015385,
+          "rerank_score": 0.000337
+        },
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.03055,
+          "rerank_score": 0.000322
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.015385,
+          "rerank_score": 0.00029
+        }
+      ],
+      "rank_of_first_expected": null,
+      "hit": null,
+      "rr": null,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C12",
+      "category": "知识库无答案",
+      "query": "出差住宿费标准是多少?",
+      "expected_behavior": "refuse",
+      "expected_doc_ids": [],
+      "in_metrics": false,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-03-1",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.016129,
+          "rerank_score": 0.003534
+        },
+        {
+          "chunk_id": "doc-hr-04-1",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.016393,
+          "rerank_score": 0.003348
+        },
+        {
+          "chunk_id": "doc-hr-05-3",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.014925,
+          "rerank_score": 0.001513
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.015873,
+          "rerank_score": 0.001257
+        },
+        {
+          "chunk_id": "doc-hr-04-0",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.015625,
+          "rerank_score": 0.000841
+        },
+        {
+          "chunk_id": "doc-hr-01-2",
+          "doc_id": "doc-hr-01",
+          "source": "hybrid",
+          "score": 0.031778,
+          "rerank_score": 0.00073
+        },
+        {
+          "chunk_id": "doc-hr-03-0",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.015152,
+          "rerank_score": 0.000588
+        },
+        {
+          "chunk_id": "doc-hr-04-3",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.014085,
+          "rerank_score": 0.000526
+        }
+      ],
+      "rank_of_first_expected": null,
+      "hit": null,
+      "rr": null,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C13",
+      "category": "文档冲突",
+      "query": "市内交通费每天报销上限是多少?",
+      "expected_behavior": "conflict",
+      "expected_doc_ids": [
+        "doc-hr-03",
+        "doc-hr-04"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-03-1",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.99304
+        },
+        {
+          "chunk_id": "doc-hr-04-1",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.032258,
+          "rerank_score": 0.992603
+        },
+        {
+          "chunk_id": "doc-hr-04-3",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.030798,
+          "rerank_score": 0.005764
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": 0.003705
+        },
+        {
+          "chunk_id": "doc-hr-04-0",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.028992,
+          "rerank_score": 0.000527
+        },
+        {
+          "chunk_id": "doc-hr-02-1",
+          "doc_id": "doc-hr-02",
+          "source": "hybrid",
+          "score": 0.025989,
+          "rerank_score": 0.000424
+        },
+        {
+          "chunk_id": "doc-hr-03-0",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.028778,
+          "rerank_score": 0.00041
+        },
+        {
+          "chunk_id": "doc-hr-03-3",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.030536,
+          "rerank_score": 0.000302
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    },
+    {
+      "case_id": "C14",
+      "category": "文档冲突",
+      "query": "报销凭证需要保留多久?",
+      "expected_behavior": "conflict",
+      "expected_doc_ids": [
+        "doc-hr-03",
+        "doc-hr-04"
+      ],
+      "in_metrics": true,
+      "hits": [
+        {
+          "chunk_id": "doc-hr-03-2",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.032787,
+          "rerank_score": 0.99269
+        },
+        {
+          "chunk_id": "doc-hr-04-2",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.032258,
+          "rerank_score": 0.992076
+        },
+        {
+          "chunk_id": "doc-prod-04-4",
+          "doc_id": "doc-prod-04",
+          "source": "hybrid",
+          "score": 0.031498,
+          "rerank_score": 0.250773
+        },
+        {
+          "chunk_id": "doc-hr-04-3",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.031025,
+          "rerank_score": 0.075577
+        },
+        {
+          "chunk_id": "doc-hr-03-3",
+          "doc_id": "doc-hr-03",
+          "source": "hybrid",
+          "score": 0.030769,
+          "rerank_score": 0.052963
+        },
+        {
+          "chunk_id": "doc-hr-05-3",
+          "doc_id": "doc-hr-05",
+          "source": "hybrid",
+          "score": 0.014925,
+          "rerank_score": 0.004516
+        },
+        {
+          "chunk_id": "doc-hr-04-1",
+          "doc_id": "doc-hr-04",
+          "source": "hybrid",
+          "score": 0.030331,
+          "rerank_score": 0.004313
+        },
+        {
+          "chunk_id": "doc-it-03-0",
+          "doc_id": "doc-it-03",
+          "source": "hybrid",
+          "score": 0.014085,
+          "rerank_score": 0.001236
+        }
+      ],
+      "rank_of_first_expected": 1,
+      "hit": 1,
+      "rr": 1.0,
+      "skipped": false,
+      "error": null
+    }
+  ],
+  "metrics": {
+    "hit_at_5": {
+      "hits": 12,
+      "total": 12,
+      "rate": 1.0
+    },
+    "mrr": 0.9583
+  },
+  "skipped": 0
+}
