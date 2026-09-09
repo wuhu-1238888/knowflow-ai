@@ -133,7 +133,7 @@
 - 验证:L1 RRF 融合手算用例对照;L5 评测集 12 例命中/排名断言(与 cases.yaml 标注一致)——初跑允许不达标,但必须产出真实数字,改管线不改阈值
 - 产出物:retrieval.py、rrf.py、测试
 
-**状态:未开始。**
+**状态:2026-09-09 已完成(commit `c71a58d`)。** 交付:rrf.py(RRF_K=60 融合,排名内去重)、retrieval.py(SearchHit{chunk_id,doc_id,text,score,source,rerank_score};BgeReranker 本地目录优先/HF 兜底;RetrievalService 四模式,空索引返回空列表触发拒答链路,_fts_available 守卫)、测试 20 例(rrf 10 + retrieval 10:pytest 70/70 绿)。L2 实测(真实 bge-m3 + bge-reranker-v2-m3,72 chunks):「报销凭证需要哪些材料」四模式均 doc-hr-03/04 置顶,hybrid_rerank 重排后无关 doc-prod-04 压至末位(rr 0.86/0.84/0.32/0.23/0.02)。偏差记录:①lancedb 0.25 中文 FTS 无语言级分词(lang_mapping 无中文),采用 ngram(2,3) tokenizer,实测「报销」「请假」精准命中;②任务定义三模式 → 落实四模式,keyword 保留为独立模式(source 枚举完整,评测可比纯 BM25 基线);③FTS 索引先建后写不自动编入新行 → ensure_fts 固定置于全部写入后并每次 optimize;④lancedb 0.25 起 list_tables() 返回带 .tables 属性的对象而非 list,_table_names() 兼容新旧两版;⑤reranker 模型同 3.2.3 偏差①通道经 ModelScope 预置至 runtime/models/BAAI/bge-reranker-v2-m3(预置脚本已删);⑥L5 评测集断言由 3.2.5 评测引擎统一执行(M2a 达标线 Hit@5≥11/12、MRR≥0.8),本任务以 L1 + L2 真实冒烟为完成证据。**
 
 ### 任务 3.2.5 EvaluationEngine + 三模式对比(M2a)
 - 做什么:评测引擎:装载 cases.yaml → 三模式同条件运行 → Hit@5/MRR 指标自实现 → run JSON 落盘 docs/eval-results/(入库,含 run_id/params_hash/doc_commit/mode×category 明细)→ 指标矩阵输出;params_hash 冻结(模型版本+分块/检索参数哈希),同参数重跑数值一致
