@@ -4,9 +4,9 @@
 设计边界(与 answer_pipeline 分工):
 - Key 只从 .env 读(DEEPSEEK_API_KEY,由 config.load_dotenv 加载),AI 绝不写 Key、
   绝不入库;未配置时抛 RuntimeError(提示人写 Key 或改用 mock);
-- 引用编号 = prompt 中上下文块编号 [n],provider 只映射「模型选了哪些块」;
-  编号与 quote 由管线层规则侧重建(见 answer_pipeline._map_citations),绝不信任
-  模型自报来源;
+- 引用编号 = prompt 中上下文块编号 [n],provider 映射「模型选了哪些块」并把正文
+  [n] 标记同步重写为稠密编号、删除悬空标记(见 _renumber_markers);quote 与最终
+  校验仍由管线层规则侧重建(见 answer_pipeline._map_citations),绝不信任模型自报来源;
 - 冲突 = 模型标注的两个上下文块编号,映射为 doc_id 对;双方是否在本次检索结果内
   由管线层校验(_map_conflicts);
 - 拒答不属于本模块:τ 阈值在管线层,模型空回答也由管线按 schema 失败 → 拒答处理;
@@ -16,6 +16,7 @@
 
 import json
 import os
+import re
 
 import httpx
 
@@ -77,6 +78,23 @@ def _extract_json(text: str) -> dict:
                     raise ValueError(f"模型输出 JSON 不是对象: {payload[:120]!r}")
                 return obj
     raise ValueError(f"模型输出 JSON 不闭合: {text[start:start + 120]!r}")
+
+
+def _renumber_markers(answer: str, ref_map: dict[int, int]) -> str:
+    """正文 [n] 标记同步重写:模型按上下文块编号标注(如只摘用块 1、3 时写 [1]/[3]),
+    而引用被稠密重编号为 1、2 → 正文 [3] 悬空。此处把标记重写为新编号,
+    未出现在引用中的悬空标记直接删除;两段式替换(占位符中转)避免降序替换级联
+    (如 {2:1, 3:2} 时先 [3]→[2] 再 [2]→[1] 会把新 [2] 误换掉)。"""
+    def _to_placeholder(match: re.Match[str]) -> str:
+        new = ref_map.get(int(match.group(1)))
+        return f"\x00{new}\x00" if new is not None else ""
+
+    out = re.sub(r"\[(\d+)\]", _to_placeholder, answer)
+    out = re.sub(r"\x00(\d+)\x00", r"[\1]", out)
+    # 悬空标记删除后的残留空白:折叠多空格、去标点前空格
+    out = re.sub(r" {2,}", " ", out)
+    out = re.sub(r" (?=[,。;:!?、])", "", out)
+    return out
 
 
 class DeepSeekProvider:
@@ -169,12 +187,16 @@ class DeepSeekProvider:
     ) -> AnswerDraft:
         by_ref = {i + 1: chunk for i, chunk in enumerate(chunks)}
         citations: list[Citation] = []
+        ref_map: dict[int, int] = {}  # 模型上下文块编号 → 稠密引用编号(正文标记同步用)
         for raw in obj.get("citations") or []:
             if not isinstance(raw, dict):
                 continue
-            chunk = by_ref.get(raw.get("ref"))
+            ref = raw.get("ref")
+            chunk = by_ref.get(ref)
             if chunk is None:  # 编号越界/非法 → 丢弃(管线层还会再校验检索集)
                 continue
+            if ref in ref_map:  # 同一块重复摘句:仅取首个(管线层按 chunk 去重,quote 规则侧重建;
+                continue        # 若不丢弃,ref_map 被反复覆盖会把正文标记重写成不存在的编号)
             quote = raw.get("quote")
             citations.append(
                 Citation(
@@ -184,6 +206,8 @@ class DeepSeekProvider:
                     quote=quote if isinstance(quote, str) else "",
                 )
             )
+            if isinstance(ref, int):
+                ref_map[ref] = len(citations)
         conflicts: list[Conflict] | None = None
         conflicts_raw = obj.get("conflicts")
         if isinstance(conflicts_raw, list):
@@ -204,8 +228,11 @@ class DeepSeekProvider:
                     )
                 )
         answer = obj.get("answer", "")
+        answer = answer if isinstance(answer, str) else ""
+        if answer:
+            answer = _renumber_markers(answer, ref_map)
         return AnswerDraft(
-            answer=answer if isinstance(answer, str) else "",
+            answer=answer,
             citations=citations,
             conflicts=conflicts,
         )

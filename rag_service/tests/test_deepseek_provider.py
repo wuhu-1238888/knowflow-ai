@@ -13,6 +13,7 @@ from rag_service.deepseek_provider import (
     SYSTEM_PROMPT,
     DeepSeekProvider,
     _extract_json,
+    _renumber_markers,
 )
 from rag_service.llm_adapter import RetrievedChunk
 
@@ -187,6 +188,79 @@ def test_invalid_refs_dropped(monkeypatch):
     draft = stubbed(monkeypatch, body).generate("问题", CHUNKS)
     assert [c.chunk_id for c in draft.citations] == ["doc-a-1"]
     assert draft.citations[0].quote == ""
+
+
+def test_plain_json_renumbers_text_markers(monkeypatch):
+    """模型只摘用块 1、3 时正文写 [1]/[3],引用稠密重编号后正文必须同步为 [1]/[2]
+    (真实缺陷回归:hybrid C02/C09 与 hybrid_rerank C07 曾出现 [3] 悬空)。"""
+    content = json.dumps(
+        {
+            "answer": "下载地址见 [1];断网时同样适用 [3]。",
+            "citations": [{"ref": 1, "quote": "a"}, {"ref": 3, "quote": "b"}],
+            "conflicts": None,
+        },
+        ensure_ascii=False,
+    )
+    body = MINIMAL_BODY | {"choices": [{"message": {"content": content}}]}
+    draft = stubbed(monkeypatch, body).generate("问题", [chunk(1), chunk(2), chunk(3)])
+    assert draft.answer == "下载地址见 [1];断网时同样适用 [2]。"
+    assert [c.index for c in draft.citations] == [1, 2]
+    assert [c.chunk_id for c in draft.citations] == ["doc-a-1", "doc-a-3"]
+
+
+# ── 正文标记重写 ──
+
+def test_duplicate_refs_mapped_once(monkeypatch):
+    """同一块多条摘句(真实回归:C05 模型对块 1 给 9 条 citation):
+    重复 ref 仅取首个,稠密编号按去重后的块分配,正文标记与引用编号对齐
+    (曾出现 ref_map 被反复覆盖 → 文本 [1]→[9]、[2]→[10]、[3]→[11] 悬空)。"""
+    content = json.dumps(
+        {
+            "answer": "第一段 [1];第二段 [1];末段 [2]。",
+            "citations": [
+                {"ref": 1, "quote": "摘句 1a"},
+                {"ref": 1, "quote": "摘句 1b"},
+                {"ref": 1, "quote": "摘句 1c"},
+                {"ref": 2, "quote": "摘句 2a"},
+            ],
+            "conflicts": None,
+        },
+        ensure_ascii=False,
+    )
+    body = MINIMAL_BODY | {"choices": [{"message": {"content": content}}]}
+    draft = stubbed(monkeypatch, body).generate("问题", [chunk(1), chunk(2), chunk(3)])
+    assert draft.answer == "第一段 [1];第二段 [1];末段 [2]。"
+    assert [(c.index, c.chunk_id) for c in draft.citations] == [
+        (1, "doc-a-1"),
+        (2, "doc-a-2"),
+    ]
+
+
+def test_renumber_markers_gap():
+    assert _renumber_markers("先 [1] 后 [3]。", {1: 1, 3: 2}) == "先 [1] 后 [2]。"
+
+
+def test_renumber_markers_no_cascade():
+    # 占位符中转:若用降序直接替换,[3]→[2] 的新 [2] 会被后续 [2]→[1] 误换
+    assert _renumber_markers("先 [2] 后 [3]。", {2: 1, 3: 2}) == "先 [1] 后 [2]。"
+
+
+def test_renumber_markers_dangling_removed():
+    # 正文引用了未出现在 citations 的块编号 → 删除标记并清理残留空白
+    assert _renumber_markers("答案 [1] 与悬空 [4]。", {1: 1}) == "答案 [1] 与悬空。"
+
+
+def test_renumber_markers_all_dangling_stripped():
+    assert _renumber_markers("仅 [3] 标记。", {}) == "仅 标记。"
+
+
+def test_renumber_markers_no_markers_unchanged():
+    assert _renumber_markers("纯文本,无标记。", {1: 1}) == "纯文本,无标记。"
+
+
+def test_renumber_markers_adjacent_and_multi_digit():
+    # 相邻标记与多位编号(如 [12])均按占位符单次替换处理
+    assert _renumber_markers("[10] 与 [2] 相邻 [10][2]。", {2: 1, 10: 2}) == "[2] 与 [1] 相邻 [2][1]。"
 
 
 def test_conflicts_mapped_to_doc_pairs(monkeypatch):
