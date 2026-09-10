@@ -252,6 +252,13 @@
 - 验证:vitest 168/168(+1)、typecheck 干净、四页 SSR 200、grep 复查仅剩规格直映射。
 - **待人浏览器走查**:375/768/1024 三断点视觉复核 + prefers-reduced-motion 实景观感(清单 ⑦⑨ 视觉部分);走查记录已写入 DesignRules「走查记录」2026-09-11 条。
 
+### 3.5.2 README 定稿 + 从零跑通(2026-09-11,机器侧完成)
+
+- README.md 定稿,覆盖任务要求的全部要素:一条命令启动(`npm run dev`,需虚拟环境已激活);模型首次下载说明(bge-m3 4.3GB / bge-reranker-v2-m3 2.2GB,位置 runtime/models/BAAI/,本地目录优先零网络加载,HF_ENDPOINT 镜像与 ModelScope 预置通道);评测运行与报告说明(`python -m rag_service.eval_engine` 三模式 + `gen_eval` 生成层,run JSON 落盘 docs/eval-results/,解读见 evaluation-report.md,数值只来自 run JSON);synthetic 声明(顶部);ASCII 架构图(浏览器 → Next.js BFF 3001 → FastAPI 8000 → SQLite/LanceDB/模型);遗留说明(真实 Key 由人写 .env 后重跑 gen_eval 同一样例集,L5 五线人工判定;AI 不写 Key);开发命令表。
+- 从零实操路径固定为:clone → npm install → venv+pip → (可选 .env)→ seed → index-docs → npm run dev → (可选)评测,与工作纪律一致(seed/index 在 dev server 启动前执行,避免 SQLite/LanceDB 并发写入);seed 与 index_docs 均内置 init_db(从零无手工建库步骤)。
+- 机器侧验证:全部 CLI 命令与 argparse 签名逐一核对;`python -m rag_service.seed` 实测两次(20 篇/14 例,幂等,临时 DB 验证后即删);eval_engine/index_docs/gen_eval 命令与既往任务实际执行完全一致(未变);dev 脚本已由运行中的 dev server 证明。
+- **待人操作:「克隆→启动→评测」按 README 从零实操一次(不含真实 Key)**——任务验证口径。
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->
