@@ -336,16 +336,17 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "市内交通费每天报销上限是多少?" }),
     );
-    await screen.findByText("口径不一致");
-    expect(screen.getByText(/上限 100 元/)).toBeTruthy();
+    expect(await screen.findByText("发现 2 份文档存在口径差异")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
     await screen.findByText(/入职第一年享有 8 天 年假/);
-    // 新版本无冲突 → 主卡下方无冲突面板
-    expect(screen.queryByText("口径不一致")).toBeNull();
-    // 旧版本冲突随上一版展开呈现,不与新回答混排
+    // 新版本无冲突 → 主卡无 Trust 提示
+    expect(screen.queryByText(/发现 .* 份文档存在口径差异/)).toBeNull();
+    // 旧版本冲突随上一版展开呈现(默认仍收起,不串到新版本)
     fireEvent.click(screen.getByRole("button", { name: /上一版回答/ }));
-    expect(screen.getByText("口径不一致")).toBeTruthy();
+    expect(screen.getByText("发现 2 份文档存在口径差异")).toBeTruthy();
+    expect(screen.queryByText(/上限 150 元/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "查看冲突来源" }));
     expect(screen.getByText(/上限 150 元/)).toBeTruthy();
   });
 
@@ -379,15 +380,21 @@ describe("AskPage 拒答 / 冲突 / 失败", () => {
     expect(screen.queryByText(/阈值/)).toBeNull();
   });
 
-  it("conflicts 非空时在回答下方渲染冲突面板", async () => {
+  it("conflicts 非空:回答卡内 Trust 提示默认收起,点击展开冲突来源(3.4.5)", async () => {
     stubFetch(async () => jsonResponse(CONFLICT_RESPONSE));
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "市内交通费每天报销上限是多少?" }));
-    expect(await screen.findByText("口径不一致")).toBeTruthy();
+    // 默认仅轻量提示,不展开两个完整来源,不重复渲染来源卡
+    expect(await screen.findByText("发现 2 份文档存在口径差异")).toBeTruthy();
     expect(screen.getByText(/KnowFlow 不替您选边/)).toBeTruthy();
+    expect(screen.queryByText(/上限 100 元/)).toBeNull();
+    // 展开后可见冲突双方来源(无 citation 时降级为 doc_id 标题)
+    fireEvent.click(screen.getByRole("button", { name: "查看冲突来源" }));
     expect(screen.getByText(/上限 100 元/)).toBeTruthy();
     expect(screen.getByText(/上限 150 元/)).toBeTruthy();
+    expect(screen.getByText("员工手册")).toBeTruthy();
+    expect(screen.getByText("差旅制度")).toBeTruthy();
   });
 
   it("网络失败渲染错误卡;重试成功后恢复", async () => {

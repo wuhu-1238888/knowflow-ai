@@ -3,15 +3,14 @@
 import { useState } from "react";
 
 import { AnswerSheet } from "@/components/ask/answer-sheet";
-import { ConflictPanel } from "@/components/ask/conflict-panel";
 import { IconChevronDown } from "@/components/icons";
 import { formatAge } from "@/lib/format";
 import type { Citation, ConflictItem } from "@/lib/rag";
 
 /* 上一版回答(3.4.4 版本管理):默认折叠,一行轻量头(无渐变点、无徽标、
    次级文字),点击展开后复用 AnswerSheet 的 previous 变体(仅复制操作,
-   边框由本容器提供)。冲突信息属于该版本,展开时随版本一并呈现,
-   不与最新回答串版本。 */
+   边框由本容器提供)。冲突信息属于该版本,随 conflicts 传入 AnswerSheet
+   的 Trust 层一并呈现,不与最新回答串版本。 */
 
 export interface AnswerVersion {
   qa_id: string;
@@ -48,17 +47,16 @@ export function PreviousAnswer({ version }: PreviousAnswerProps) {
         <span className="text-ink-3">{formatAge(version.createdAt)}</span>
       </button>
       {expanded ? (
-        <div className="flex flex-col gap-3 border-t border-hairline p-3">
+        <div className="border-t border-hairline p-3">
           <AnswerSheet
+            key={version.qa_id}
             variant="previous"
             frame={false}
             answer={version.answer}
             citations={version.citations}
+            conflicts={version.conflicts}
             qaId={version.qa_id}
           />
-          {version.conflicts ? (
-            <ConflictPanel conflicts={version.conflicts} />
-          ) : null}
         </div>
       ) : null}
     </section>

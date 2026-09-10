@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { AnswerSheet } from "@/components/ask/answer-sheet";
 import { AskTextarea } from "@/components/ask/ask-textarea";
-import { ConflictPanel } from "@/components/ask/conflict-panel";
 import { ErrorCallout } from "@/components/ask/error-callout";
 import { NoAnswerCallout } from "@/components/ask/no-answer-callout";
 import { PreviousAnswer, type AnswerVersion } from "@/components/ask/previous-answer";
@@ -158,22 +157,19 @@ export default function AskPage() {
         </div>
       ) : latest ? (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3">
-            <AnswerSheet
-              variant="latest"
-              answer={latest.answer}
-              citations={latest.citations}
-              qaId={latest.qa_id}
-              versionMeta={`v${latest.version} · ${versionAgeLabel(latest.createdAt)}`}
-              generating={phase === "regenerating"}
-              sameNotice={sameNotice}
-              onRegenerate={() => void submit(lastQuery, true)}
-            />
-            {/* 冲突信息属于当前版本:重新生成期间隐藏旧版本冲突,避免串版本 */}
-            {phase !== "regenerating" && latest.conflicts ? (
-              <ConflictPanel conflicts={latest.conflicts} />
-            ) : null}
-          </div>
+          {/* key = qa_id:每个版本独立组件状态(冲突展开/反馈/抽屉互不串) */}
+          <AnswerSheet
+            key={latest.qa_id}
+            variant="latest"
+            answer={latest.answer}
+            citations={latest.citations}
+            conflicts={latest.conflicts}
+            qaId={latest.qa_id}
+            versionMeta={`v${latest.version} · ${versionAgeLabel(latest.createdAt)}`}
+            generating={phase === "regenerating"}
+            sameNotice={sameNotice}
+            onRegenerate={() => void submit(lastQuery, true)}
+          />
           {previous ? <PreviousAnswer version={previous} /> : null}
         </div>
       ) : null}

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { CitationChip } from "@/components/ask/citation-chip";
+import { ConflictPanel } from "@/components/ask/conflict-panel";
 import { EvidenceItem } from "@/components/ask/evidence-item";
 import { SourceDrawer } from "@/components/ask/source-drawer";
 import {
@@ -13,7 +14,12 @@ import {
   IconThumbUp,
 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { sendFeedback, type Citation, type FeedbackRating } from "@/lib/rag";
+import {
+  sendFeedback,
+  type Citation,
+  type ConflictItem,
+  type FeedbackRating,
+} from "@/lib/rag";
 
 /* AnswerSheet(3.3.2 全量):元信息行 → AI 眉题+正文(引用 chip 内嵌)
    → 依据带(EvidenceItem)→ 操作行(重新生成/复制/有用·无用)。
@@ -25,7 +31,9 @@ import { sendFeedback, type Citation, type FeedbackRating } from "@/lib/rag";
    版本管理(3.4.4):variant latest = 主卡(「AI 回答 · 最新」+ 版本标注 +
    完整操作行);previous = 历史版本(「上一版回答」,仅复制操作,边框由外层
    折叠容器提供);generating = 卡内加载态(重新生成中,真实单请求单文案,
-   不伪造多阶段);sameNotice = 新旧内容一致提示(不复制旧卡片伪装新结果)。 */
+   不伪造多阶段);sameNotice = 新旧内容一致提示(不复制旧卡片伪装新结果)。
+   冲突 Trust 层(3.4.5):conflicts 非空时在正文之后、依据与来源之前渲染
+   ConflictPanel(默认轻量提示,可展开来源);冲突随版本传入、不串版本。 */
 
 export function formatAnswer(answer: string): string {
   return answer
@@ -75,6 +83,8 @@ export interface AnswerSheetProps {
   sameNotice?: boolean;
   /** 外层边框;previous 折叠容器自带边框时关闭(默认开)。 */
   frame?: boolean;
+  /** 本版本的冲突(Trust 层):非空时渲染在正文与依据之间(3.4.5)。 */
+  conflicts?: ConflictItem[] | null;
 }
 
 export function AnswerSheet({
@@ -87,6 +97,7 @@ export function AnswerSheet({
   generating = false,
   sameNotice = false,
   frame = true,
+  conflicts = null,
 }: AnswerSheetProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [drawer, setDrawer] = useState<Citation | null>(null);
@@ -206,6 +217,10 @@ export function AnswerSheet({
               })}
             </p>
           </div>
+          {/* 冲突 Trust 层(3.4.5):正文之后、依据与来源之前;轻量提示默认收起 */}
+          {conflicts && conflicts.length > 0 ? (
+            <ConflictPanel conflicts={conflicts} citations={citations} />
+          ) : null}
           {citations.length > 0 ? (
             <div className="border-t border-hairline px-4 py-3">
               <h2 className="mb-2 text-heading-3 font-medium text-ink">

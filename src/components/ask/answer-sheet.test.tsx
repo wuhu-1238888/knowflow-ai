@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Citation } from "@/lib/rag";
+import type { Citation, ConflictItem } from "@/lib/rag";
 import { AnswerSheet, formatAnswer, parseAnswerSegments } from "./answer-sheet";
 
 /* L3 组件测试(3.3.2 全量):formatAnswer 清洗 / 引用段解析 / chip 渲染与灰态 /
@@ -286,5 +286,29 @@ describe("版本管理(3.4.4):最新主卡 / 上一版弱化 / 加载态 / 一�
       screen.getByText("已完成重新生成,本次回答与上一版一致。"),
     ).toBeTruthy();
     expect(screen.getByText("答案正文")).toBeTruthy();
+  });
+
+  it("conflicts:Trust 提示内嵌在正文与依据之间(3.4.5,非独立大卡)", () => {
+    const conflicts: ConflictItem[] = [
+      {
+        doc_a: "doc-a",
+        doc_b: "doc-b",
+        quote_a: "每日上限 100 元。",
+        quote_b: "每日上限 150 元。",
+      },
+    ];
+    render(
+      <AnswerSheet
+        answer="答案正文"
+        citations={[CITATION]}
+        conflicts={conflicts}
+      />,
+    );
+    const alert = screen.getByText("发现 2 份文档存在口径差异");
+    const evidence = screen.getByText("依据与来源(1)");
+    // 提示位于依据带之前(DOCUMENT_POSITION_FOLLOWING = 4)
+    expect(
+      (alert.compareDocumentPosition(evidence) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+    ).toBe(true);
   });
 });

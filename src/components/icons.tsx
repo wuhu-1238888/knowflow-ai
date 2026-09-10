@@ -148,3 +148,13 @@ export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
     </Base>
   );
 }
+
+export function IconAlert(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M8 2.5L14.5 13H1.5L8 2.5z" />
+      <path d="M8 6.5v3" />
+      <path d="M8 11.5v.1" />
+    </Base>
+  );
+}
