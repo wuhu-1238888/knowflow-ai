@@ -187,13 +187,18 @@
 - **报告自检**:137 项程序化核对(报告数字 ↔ run JSON)全部通过;人工逐格核对待人(L4 走查)。
 - **测试**:后端 pytest 181/181(DeepSeekProvider 31 例 + gen_eval 工厂化更新),前端零改动 vitest 133/133。
 - **L4 待人操作**:按 evaluation-report.md §2.1 逐格打开 run JSON 核对数字;review-2026-09-10T140445Z.md 五线人工判定;demo-script 计时复核表页面级亲测(3.4.1 遗留)。
-- **下一步**:3.4.3 冲突/删除/再生成联动走查 → 检索性能优化(人拍板后另立)→ 遗留 #1 判定侧人工完成即解除。
+- **下一步**:3.4.3 机器侧走查已闭环(见下节),剩 L4 页面人工走查 → 检索性能优化(人拍板后另立)→ 遗留 #1 判定侧人工完成即解除。
 
-### 3.4.3 冲突/删除/再生成联动走查记录(2026-09-10,进行中)
+### 3.4.3 冲突/删除/再生成联动走查记录(2026-09-10,机器侧完成)
 
 - **冲突结构化兜底已入库**(前置条件,3.4.2 拍板):`_fallback_conflicts` 规则侧补全(答案含冲突表述 + 引用恰好双方文档 → 一对冲突;单方/三方不触发防误报),真实重跑 140445Z 冲突 2/2 零误报;测试 test_answer_pipeline 4 例新建,pytest 186/186。
 - **QA 日志审计补全**:`qa_logs` 增 `conflicts_json` 列(建表 + `_migrate` ALTER 老库补列,老行 NULL 语义不变);`add_qa_log`/`/api/ask` 落库结构化冲突;测试 test_repository(roundtrip 断言 conflicts_json 与 NULL)、test_api_ask(新例:conflicts 非空落库 + 无冲突 NULL)、test_api_feedback(调用点补齐字段)。
-- **待走查**:C13/C14 冲突 UI 真实走查(ConflictPanel 双卡等权/来源抽屉)、删除文档后冲突案例行为、FR-11 重新生成历史可见(页面实测)、QA 日志 citations/conflicts 抽查。
+- **API 实测**(2026-09-10,真实 DeepSeek + 全链检索,dev server 重启后):
+  - C13「市内交通费每天报销上限是多少?」→ 2 引用(doc-hr-03 × doc-hr-04)+ conflicts 1 对,quote 为双方原文子串(03「地铁、公交」vs 04「地铁、公交、共享单车」);C14 同形态 1 对;
+  - 落库核对:conflicts_json 与响应逐字一致,citations_json 2 条完整;拒答行 conflicts_json = NULL / citations_json = [] 语义正确;
+  - FR-11:同问两次 → 两个 qa_id、两次均带引用(每次独立生成,重新生成历史可见的 API 侧成立);
+  - **删除联动**:DELETE doc-hr-03 → 文档列表 19、C13 重问不崩溃 → 单一来源回答(仅引 doc-hr-04,conflicts = None,兜底不误触发);恢复 = seed + index_docs 全量重建 → 20 篇 / 72 chunks,C13 冲突完整回归(2 引用 + 1 对)。走查前 DB 备份,恢复验证后删除。
+- **L4 待人操作(浏览器)**:C13/C14 问答页 ConflictPanel 双卡等权呈现 + 来源抽屉双方可点;重新生成按钮加载期旧回答保留、完成后新卡在上;文档库删除 doc-hr-03 后重问不崩溃(机器侧已证,页面侧一次即可)。
 
 ## 修订
 
