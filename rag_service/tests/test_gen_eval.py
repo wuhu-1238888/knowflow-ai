@@ -127,7 +127,7 @@ def test_run_records_full_fields():
     result = run([ANSWER_CASE])
     assert result["run_id"].startswith("gen-")
     assert result["mode"] == "hybrid_rerank"
-    assert result["provider"] == "MockProvider"
+    assert result["provider"] == "FakeProvider"  # 按管线实际 provider 类名记录
     assert result["doc_commit"] == "abc1234"
     assert result["skipped"] == 0
     entry = result["per_case"][0]
@@ -190,13 +190,31 @@ def test_review_table_structure_and_precheck():
     for line in ("人工:要点", "人工:幻觉", "人工:引用", "人工:拒答", "人工:冲突"):
         assert line in table
     assert "params_hash=hash123456789012" in table
-    assert "MockProvider" in table
+    # 非 Mock provider → 真实生成口径声明(不出现 Mock 结构豁免)
+    assert "**FakeProvider**" in table
+    assert "真实生成检验" in table
     assert "要点 2/2" in table
     assert "拒答对齐✓" in table
-    # 冲突例:Mock 限制如实暴露
-    assert "冲突 None(Mock 限制)" in table
+    # 冲突例:非 Mock 下 None 交由人工判定
+    assert "冲突 None(待人工判定)" in table
     assert "C01" in table and "C13" in table
     assert "年假有几天?" in table  # 逐例输出含 query
+
+
+def test_review_table_mock_provider_statements():
+    from rag_service.mock_provider import MockProvider
+
+    service = FakeService({ANSWER_CASE["query"]: [hit("doc-a")]})
+    pipeline = AnswerPipeline(MockProvider())
+    result = run_pipeline_mode(
+        "hybrid_rerank", service.search, pipeline, [ANSWER_CASE],
+        CREATED, "abc1234", "hash123456789012",
+    )
+    assert result["provider"] == "MockProvider"
+    table = build_review_table({"hybrid_rerank": result}, [ANSWER_CASE])
+    assert "**MockProvider**(确定性摘句)" in table
+    assert "幻觉线 = 摘句结构保证" in table
+    assert "冲突线 Mock 恒 None" in table
 
 
 def test_review_table_skipped_row():

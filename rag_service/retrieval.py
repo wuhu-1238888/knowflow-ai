@@ -21,6 +21,10 @@ from .rrf import rrf_fuse
 
 TOP_K = 8
 CANDIDATE_FACTOR = 3
+# rerank 输入截断上限(字符):候选长文本在 CPU 上推理 ~30s/问 → 截断后 ~10s/问
+# (2026-09-10 人拍板;指标重跑验证,劣化则回退)。仅截断 reranker 输入,
+# 命中文本(引用/抽屉)仍为完整 chunk。
+RERANK_MAX_CHARS = 200
 
 MODES = ("vector", "keyword", "hybrid", "hybrid_rerank")
 
@@ -156,7 +160,7 @@ class RetrievalService:
         ordered = sorted(scores, key=lambda cid: -scores[cid])
         candidates = ordered[: top_k * CANDIDATE_FACTOR]
         rerank_scores = self._reranker.rerank(
-            query, [by_id[cid]["text"] for cid in candidates]
+            query, [by_id[cid]["text"][:RERANK_MAX_CHARS] for cid in candidates]
         )
         combined = sorted(
             zip(candidates, rerank_scores), key=lambda pair: -pair[1]

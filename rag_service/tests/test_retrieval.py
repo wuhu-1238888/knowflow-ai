@@ -159,6 +159,29 @@ def test_hit_shape(service):
     assert isinstance(hit.score, float)
 
 
+def test_hybrid_rerank_truncates_input_not_hits(tmp_path):
+    """rerank 输入截断到 RERANK_MAX_CHARS(性能拍板),命中文本仍为完整 chunk。"""
+    long_text = "报销流程说明" * 80  # 480 字符 > 200
+    index = LanceIndex(FakeKeywordEmbedder(), db_path=tmp_path / "lancedb-trunc")
+    index.index_document("doc-long", long_text)
+    index.ensure_fts()
+
+    seen: list[tuple[str, int]] = []
+
+    class RecordingReranker:
+        def rerank(self, query, texts):
+            seen.extend((t, len(t)) for t in texts)
+            return [0.5] * len(texts)
+
+    service = RetrievalService(
+        index, FakeKeywordEmbedder(), reranker=RecordingReranker()
+    )
+    hits = service.search("报销", mode="hybrid_rerank", top_k=1)
+    assert seen and all(length <= 200 for _, length in seen)
+    assert seen[0][0] == long_text[:200]  # reranker 收到的正是截断文本
+    assert hits[0].text == long_text  # 命中文本不截断(引用/抽屉用全文)
+
+
 def test_hybrid_hits_carry_vec_score(service):
     """hybrid 命中来自向量路的候选携带 vec_score(余弦分),供 3.2.6 拒答阈值用。"""
     hits = service.search("报销票据", mode="hybrid", top_k=3)

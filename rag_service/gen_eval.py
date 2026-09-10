@@ -4,10 +4,10 @@
 (要点 / 幻觉 / 引用 / 拒答 / 冲突五线)记录在案;人工判定为金标准,
 机器只做预检(要点子串命中 / 拒答行为对齐),不替代人工。
 
-诚实声明(写死):
-- MockProvider 摘句生成 → 幻觉线为结构保证(逐字摘录),非真实生成检验;
-- MockProvider conflicts 恒为 None → 冲突线 2 例注定不达标;
-  以上两线真实验收 = 真实 provider 重跑(遗留 #1 范围)。
+Provider 经 get_provider() 工厂按 LLM_PROVIDER 选择(默认 mock,与问答链路一致):
+- MockProvider:幻觉线为结构保证(逐字摘录)非真实生成检验、冲突线恒 None——
+  核对表如实声明,真实验收 = LLM_PROVIDER=deepseek 重跑(遗留 #1);
+- DeepSeekProvider:真实生成,五线全部可由人工判定(Key 由人写入 .env)。
 
 用法:python -m rag_service.gen_eval [--out-dir docs/eval-results]
 """
@@ -21,7 +21,7 @@ from . import config
 from .answer_pipeline import ASK_MODES, AnswerPipeline, DEGRADE_MESSAGE
 from .eval_engine import _filename_ts, compute_params_hash, get_doc_commit
 from .indexing import BgeM3Embedder, LanceIndex
-from .mock_provider import MockProvider
+from .llm_adapter import get_provider
 from .repository import new_id, now_iso
 from .retrieval import BgeReranker, RetrievalService, TOP_K
 from .seed import load_cases
@@ -111,7 +111,7 @@ def run_pipeline_mode(
     return {
         "run_id": new_id("gen-"),
         "mode": mode,
-        "provider": "MockProvider",
+        "provider": type(pipeline._provider).__name__,
         "params_hash": params_hash,
         "doc_commit": doc_commit,
         "created_at": created_at,
@@ -129,7 +129,7 @@ def _actual_behavior(entry: dict) -> str:
     return "回答"
 
 
-def _precheck_cell(entry: dict) -> str:
+def _precheck_cell(entry: dict, provider: str) -> str:
     """机器预检摘要(结构事实,非人工判定)。"""
     pre = entry["point_precheck"] or {}
     parts = [f"要点 {len(pre.get('covered', []))}/{pre.get('total', 0)}"]
@@ -142,7 +142,8 @@ def _precheck_cell(entry: dict) -> str:
     if entry["conflicts"]:
         parts.append(f"冲突 {len(entry['conflicts'])} 对")
     elif entry["expected_behavior"] == "conflict":
-        parts.append("冲突 None(Mock 限制)")
+        suffix = "(Mock 限制)" if provider == "MockProvider" else "(待人工判定)"
+        parts.append(f"冲突 None{suffix}")
     return ";".join(parts)
 
 
@@ -174,23 +175,36 @@ def _detail_block(entry: dict) -> str:
     return "\n".join(lines)
 
 
+def _provider_header_lines(provider: str) -> list[str]:
+    """核对表 Provider 声明:Mock 与真实 provider 的诚实口径不同。"""
+    if provider == "MockProvider":
+        return [
+            "- Provider:**MockProvider**(确定性摘句);真实 provider 重跑 = 遗留 #1 范围",
+            "- 诚实声明:幻觉线 = 摘句结构保证,非真实生成检验;冲突线 Mock 恒 None,"
+            " 2 例必 ✗——均归遗留 #1 真实 provider 重跑",
+        ]
+    return [
+        f"- Provider:**{provider}**(真实生成;Key 由人写入 .env,AI 绝不写 Key)",
+        "- 口径:五线全部由人工判定;幻觉 / 冲突线 = 真实生成检验,不适用结构豁免",
+    ]
+
+
 def build_review_table(results: dict[str, dict], cases: list[dict]) -> str:
     """人工核对表 markdown:每模式一张核对表 + 逐例输出(五线人工填)。"""
+    first = next(iter(results.values()))
     header = [
         "# L5 生成层人工核对表(3.2.6d)",
         "",
         "- 参数冻结:params_hash={} / doc_commit={} / created_at={}".format(
-            next(iter(results.values()))["params_hash"],
-            next(iter(results.values()))["doc_commit"],
-            next(iter(results.values()))["created_at"],
+            first["params_hash"],
+            first["doc_commit"],
+            first["created_at"],
         ),
-        "- Provider:**MockProvider**(确定性摘句);真实 provider 重跑 = 遗留 #1 范围",
+        *_provider_header_lines(first["provider"]),
         "- 口径:人工判定为金标准,机器预检仅辅助;核对重点 = **hybrid_rerank** 表",
         "  (vector / hybrid 为对照记录);五线填写 ✓ / ✗ / —(不适用)",
         "- 达标线(evaluation-plan §2):要点 ≥90% / 幻觉 0 例 / 引用错误=失败例 /"
         " 拒答 2/2 且 0 误拒 / 冲突 2/2",
-        "- 诚实声明:幻觉线 = 摘句结构保证,非真实生成检验;冲突线 Mock 恒 None,"
-        " 2 例必 ✗——均归遗留 #1 真实 provider 重跑",
         "",
     ]
     lines = list(header)
@@ -214,7 +228,7 @@ def build_review_table(results: dict[str, dict], cases: list[dict]) -> str:
             lines.append(
                 f"| {entry['case_id']} | {entry['category']} | "
                 f"{entry['expected_behavior']} | {_actual_behavior(entry)} | "
-                f"{_precheck_cell(entry)} | | | | | |"
+                f"{_precheck_cell(entry, first['provider'])} | | | | | |"
             )
         lines += ["", "### 逐例输出", ""]
         for entry in result["per_case"]:
@@ -253,7 +267,7 @@ def main(argv: list[str] | None = None) -> int:
     embedder = BgeM3Embedder()
     index = LanceIndex(embedder)
     service = RetrievalService(index, embedder, reranker=BgeReranker())
-    pipeline = AnswerPipeline(MockProvider())
+    pipeline = AnswerPipeline(get_provider())  # 按 LLM_PROVIDER 选择(默认 mock)
 
     def search_fn(query: str, mode: str) -> list:
         return service.search(query, mode=mode, top_k=TOP_K)

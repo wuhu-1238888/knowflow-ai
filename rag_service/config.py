@@ -9,7 +9,13 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# 加载 .env(存在时;不覆盖已设环境变量)。Key 只由人写入 .env,AI 绝不写 Key;
+# 本模块被 main / gen_eval / 测试共同导入,load 必须在工厂读取环境变量之前。
+load_dotenv(PROJECT_ROOT / ".env")
 
 DEFAULT_RUNTIME_DIR = PROJECT_ROOT / "runtime"
 
