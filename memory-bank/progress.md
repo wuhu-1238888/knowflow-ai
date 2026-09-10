@@ -250,6 +250,8 @@
 
 {2026-09-09 问答页垂直节奏} → 现象:问答页内容紧贴主内容区顶部(main 无顶部 padding),标题/输入框过早进入视线,缺少从导航进入内容的过渡感。实施:人拍板页面级呼吸空间(其他页维持现状)——根容器 `gap-4` → `gap-6 pt-6 lg:pt-12`(24px <1024px / 48px ≥1024px),页头 → 提问区与各状态区块间统一 24px;加载块去 `py-6` 与结果态同位、不跳动。全部使用既有 spacing token(s6/s12),未新增 token/组件。验证:vitest 59/59(新增垂直节奏断言)、typecheck 干净、SSR 实测类名生效;首屏推演 1280/1440/1920 下提问框均在首屏可见。取舍:垂直节奏为问答页页面级决策,全局 main 的顶部 spacing 未动(避免其他三页整体下移),后续如统一处理需单独拍板。
 
+{2026-09-11 有用/无用反馈选中态不显示} → 现象:用户实测「复制回答」反馈正常,但点「有用/无用」按钮毫无选中视觉变化(疑似反馈未成功)。根因:纯 UI 层问题——DB 中 qa_feedback 已存在用户 POST 的 useful 记录(16:11/16:17 两笔),链路与落库全部正常;Button 组件为纯字符串拼接 className(无 tailwind-merge),选中 className `bg-brand-50 text-brand-800` 与 ghost variant 的 `bg-transparent text-ink-2` 平级冲突,CSS 样式表顺序决定胜负,选中类从未生效。实施:选中态改用 `aria-pressed:` 变体(`aria-pressed:bg-brand-50 aria-pressed:text-brand-800 aria-pressed:hover:bg-brand-100`)——属性选择器 `[aria-pressed="true"]` 特异性(0,2,0)高于基础 variant 类(0,1,0),必然覆盖 ghost 样式;复制按钮同理改 `data-[copied=true]:text-success-text` / `data-[failed=true]:text-danger-text`(复制此前能正常显示因状态文案变更+图标切换不依赖颜色类,颜色类同样存在此冲突,一并修正)。验证:编译后 CSS 实测含 5 条目标规则(aria-pressed ×3 + data-copied ×1 + data-failed ×1,属性选择器形态正确);vitest 167/167(断言同步更新为变体类名);typecheck 干净;零新依赖。取舍:不动 Button 组件引入 tailwind-merge(全局改动面大),按需用属性变体兜底同类冲突。
+
 ## 已解决的问题
 
 | # | 问题 | 根因 | 修复 |

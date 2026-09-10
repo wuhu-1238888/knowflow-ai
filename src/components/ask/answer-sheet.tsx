@@ -338,18 +338,15 @@ export function AnswerSheet({
               </Button>
             ) : null}
             {/* 复制回答(3.4.6):仅真实 Clipboard 成功后反馈「✓ 已复制」,失败可读提示,
-                1.8s 自动恢复;复制内容 = 本版本回答原文(与 latest/previous 无关) */}
+                1.8s 自动恢复;复制内容 = 本版本回答原文(与 latest/previous 无关)。
+                状态色用 data 属性变体(特异性高于 ghost 基础色,不依赖类顺序) */}
             <Button
               variant="ghost"
               size="md"
+              data-copied={copyState === "copied" ? "true" : undefined}
+              data-failed={copyState === "failed" ? "true" : undefined}
               onClick={() => void copyAnswer()}
-              className={
-                copyState === "copied"
-                  ? "text-success-text"
-                  : copyState === "failed"
-                    ? "text-danger-text"
-                    : ""
-              }
+              className="data-[copied=true]:text-success-text data-[failed=true]:text-danger-text"
             >
               {copyState === "idle" ? <IconCopy className="size-4" /> : null}
               {copyState === "idle"
@@ -358,8 +355,10 @@ export function AnswerSheet({
                   ? "✓ 已复制"
                   : "复制失败,请重试"}
             </Button>
-            {/* 有用/无用(3.4.6):互斥选中(brand-50 底 + 深紫字),重复点击同一项
-                不重复提交;pending 禁用防重复点击;失败恢复原状态 + 轻量提示 */}
+            {/* 有用/无用(3.4.6):互斥选中(浅紫底 + 深紫字),重复点击同一项
+                不重复提交;pending 禁用防重复点击;失败恢复原状态 + 轻量提示。
+                选中样式用 aria-pressed 变体:属性选择器特异性高于 ghost 的
+                bg-transparent/text-ink-2,保证选中态必然生效(修复 2026-09-11)。 */}
             <span className="ml-2 flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -367,9 +366,7 @@ export function AnswerSheet({
                 aria-pressed={feedback.rating === "useful"}
                 disabled={feedback.pending}
                 onClick={() => void submitFeedback("useful")}
-                className={
-                  feedback.rating === "useful" ? "bg-brand-50 text-brand-800" : ""
-                }
+                className="aria-pressed:bg-brand-50 aria-pressed:text-brand-800 aria-pressed:hover:bg-brand-100"
               >
                 <IconThumbUp className="size-4" />
                 有用
@@ -380,9 +377,7 @@ export function AnswerSheet({
                 aria-pressed={feedback.rating === "useless"}
                 disabled={feedback.pending}
                 onClick={() => void submitFeedback("useless")}
-                className={
-                  feedback.rating === "useless" ? "bg-brand-50 text-brand-800" : ""
-                }
+                className="aria-pressed:bg-brand-50 aria-pressed:text-brand-800 aria-pressed:hover:bg-brand-100"
               >
                 <IconThumbDown className="size-4" />
                 无用

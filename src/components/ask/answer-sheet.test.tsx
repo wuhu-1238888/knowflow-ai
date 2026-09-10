@@ -223,7 +223,7 @@ describe("操作行:重新生成 / 有用·无用", () => {
     // 3.4.6:恢复读取不锁定按钮,点击立即生效(用户提交优先于读取结果)
     fireEvent.click(useful);
     await waitFor(() => expect(useful.getAttribute("aria-pressed")).toBe("true"));
-    expect(useful.className).toContain("bg-brand-50");
+    expect(useful.className).toContain("aria-pressed:bg-brand-50");
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
     expect(post?.[0]).toBe("/api/qa/qa-1/feedback");
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({ rating: "useful" });
@@ -266,13 +266,13 @@ describe("操作反馈(3.4.6):互斥 / 防重 / 失败恢复 / 挂载恢复", ()
     const useless = screen.getByRole("button", { name: "无用" }) as HTMLButtonElement;
     fireEvent.click(useful);
     await waitFor(() => expect(useful.getAttribute("aria-pressed")).toBe("true"));
-    expect(useful.className).toContain("bg-brand-50");
+    expect(useful.className).toContain("aria-pressed:bg-brand-50");
     expect(useless.getAttribute("aria-pressed")).toBe("false");
     fireEvent.click(useless);
     await waitFor(() => expect(useless.getAttribute("aria-pressed")).toBe("true"));
+    // 选中态由 aria-pressed 属性驱动(变体类为静态 class,样式随属性生效)
     expect(useful.getAttribute("aria-pressed")).toBe("false");
-    expect(useful.className).not.toContain("bg-brand-50");
-    expect(useless.className).toContain("bg-brand-50");
+    expect(useless.className).toContain("aria-pressed:bg-brand-50");
   });
 
   it("重复点击同一项:保持选中,不重复提交(仅一次 POST)", async () => {
@@ -386,7 +386,7 @@ describe("复制回答反馈(3.4.6)", () => {
       // 复制内容 = AI 回答原文(不改既有复制数据契约)
       expect(writeText).toHaveBeenCalledWith("答案正文");
       const copied = screen.getByRole("button", { name: "✓ 已复制" });
-      expect(copied.className).toContain("text-success-text");
+      expect(copied.className).toContain("data-[copied=true]:text-success-text");
       act(() => {
         vi.advanceTimersByTime(1800);
       });
