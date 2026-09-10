@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS qa_logs (
   query TEXT NOT NULL,
   answer TEXT,
   citations_json TEXT NOT NULL DEFAULT '[]',
+  conflicts_json TEXT,
   no_answer INTEGER NOT NULL DEFAULT 0,
   mode TEXT NOT NULL,
   created_at TEXT NOT NULL
@@ -91,6 +92,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE evaluation_runs ADD COLUMN per_case_json TEXT"
         )
+    qa_cols = {row[1] for row in conn.execute("PRAGMA table_info(qa_logs)")}
+    if "conflicts_json" not in qa_cols:
+        # 3.4.3 审计补全:冲突结构化结果落库(老行保持 NULL,语义不变)
+        conn.execute("ALTER TABLE qa_logs ADD COLUMN conflicts_json TEXT")
 
 
 def init_db(db_path: Path | None = None, lancedb_dir: Path | None = None) -> Path:

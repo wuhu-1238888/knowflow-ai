@@ -5,7 +5,9 @@
 - FR-06 拒答 = 模式主分数 < τ(规则阈值,不用 LLM 判定;τ 改动须人拍板);
 - FR-05 引用编号与 quote 全部规则侧重建(编号=被摘用顺序,quote=chunk 首句摘录,
   必为原文子串),绝不信任模型自报来源;非本次检索 chunk 的引用直接丢弃;
-- FR-07 冲突仅由 LLM 标注,规则侧只校验双方 doc 均在本次检索结果内,并列呈现不选边;
+- FR-07 冲突由 LLM 标注,规则侧校验双方 doc 均在本次检索结果内;LLM 未标注但答案含
+  冲突表述且引用恰好双方文档时,规则侧兜底补全(2026-09-10 人拍板:真实重跑 C13/C14
+  模型散文并列呈现但未输出结构化 conflicts 的处置),并列呈现不选边;
 - LLM 异常 → 重试 1 次 → 仍失败返回标准降级话术;schema 校验失败 → 重试 1 次
   → 按拒答处理并留日志;
 - 审计最小落点:全字段进 QA 日志(API 层落库,非本模块)。
@@ -31,6 +33,19 @@ REFUSE_MESSAGE = "抱歉,当前知识库中没有找到足够相关的答案。�
 DEGRADE_MESSAGE = "回答服务暂时不可用,请稍后重试。"
 
 GENERATE_RETRIES = 1  # 失败后的重试次数(共 1 + 1 次尝试)
+
+# 规则侧冲突兜底的答案表述词集(保守:仅明确表述不一致/版本分歧时才触发,
+# 与「引用恰好双方文档」双条件并取,避免对多文档综合回答误报)
+CONFLICT_MARKERS = (
+    "不一致",
+    "不同版本",
+    "两个版本",
+    "存在矛盾",
+    "相互矛盾",
+    "两种不同",
+    "两个不同",
+    "不同说法",
+)
 
 # /api/ask 允许的模式(keyword 仅作评测对照,不进问答链路)
 ASK_MODES = ("vector", "hybrid", "hybrid_rerank")
@@ -65,6 +80,21 @@ def display_score(hit: SearchHit, mode: str) -> float:
     if mode == "hybrid_rerank" and hit.rerank_score is not None:
         return hit.rerank_score
     return hit.score
+
+
+def _fallback_conflicts(answer: str, citations: list[dict]) -> list[dict] | None:
+    """规则侧冲突兜底:答案含冲突表述(CONFLICT_MARKERS)且引用恰好双方文档时,
+    生成一对冲突条目;quote 沿用规则侧摘录(必为原文子串)。
+    不满足条件(无表述 / 单方或三方以上文档)一律 None,避免多文档综合回答误报。"""
+    if not answer or not any(marker in answer for marker in CONFLICT_MARKERS):
+        return None
+    by_doc: dict[str, str] = {}
+    for citation in citations:
+        by_doc.setdefault(citation["doc_id"], citation["quote"])
+    if len(by_doc) != 2:
+        return None
+    (doc_a, quote_a), (doc_b, quote_b) = list(by_doc.items())
+    return [{"doc_a": doc_a, "doc_b": doc_b, "quote_a": quote_a, "quote_b": quote_b}]
 
 
 def build_context(hits: list[SearchHit]) -> list[RetrievedChunk]:
@@ -123,12 +153,13 @@ class AnswerPipeline:
                 answer=None, citations=[], no_answer=True,
                 confidence=confidence, conflicts=None,
             )
+        citations = self._map_citations(draft, hits, mode)
         return AnswerResult(
             answer=draft.answer,
-            citations=self._map_citations(draft, hits, mode),
+            citations=citations,
             no_answer=False,
             confidence=confidence,
-            conflicts=self._map_conflicts(draft, hits),
+            conflicts=self._map_conflicts(draft, hits, draft.answer, citations),
         )
 
     # ── 生成 + 重试 ──
@@ -196,10 +227,16 @@ class AnswerPipeline:
         return out
 
     @staticmethod
-    def _map_conflicts(draft: AnswerDraft, hits: list[SearchHit]) -> list[dict] | None:
-        """冲突校验:双方 doc 必须都在本次检索结果内;quote 不能核对时替换为规则侧摘录。"""
+    def _map_conflicts(
+        draft: AnswerDraft,
+        hits: list[SearchHit],
+        answer: str,
+        citations: list[dict],
+    ) -> list[dict] | None:
+        """冲突校验:双方 doc 必须都在本次检索结果内;quote 不能核对时替换为规则侧摘录。
+        LLM 未标注结构化 conflicts 时走规则侧兜底(_fallback_conflicts,2026-09-10 人拍板)。"""
         if not draft.conflicts:
-            return None
+            return _fallback_conflicts(answer, citations)
         by_doc: dict[str, SearchHit] = {}
         for hit in hits:
             by_doc.setdefault(hit.doc_id, hit)

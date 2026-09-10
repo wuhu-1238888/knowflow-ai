@@ -132,6 +132,9 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
                 "query": query,
                 "answer": result.answer,
                 "citations_json": json.dumps(citations, ensure_ascii=False),
+                "conflicts_json": json.dumps(result.conflicts, ensure_ascii=False)
+                if result.conflicts
+                else None,
                 "no_answer": 1 if result.no_answer else 0,
                 "mode": req.mode,
                 "created_at": now_iso(),

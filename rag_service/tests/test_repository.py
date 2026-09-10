@@ -165,6 +165,7 @@ def test_qa_log_roundtrip_and_limit(repo):
                 "query": f"问题 {i}",
                 "answer": "答案",
                 "citations_json": '["doc-hr-05"]',
+                "conflicts_json": None if i else '{"doc_a": "doc-hr-03", "doc_b": "doc-hr-04"}',
                 "no_answer": 0,
                 "mode": "hybrid_rerank",
                 "created_at": f"2026-09-0{9 - i}T10:00:00+00:00",
@@ -174,3 +175,5 @@ def test_qa_log_roundtrip_and_limit(repo):
     assert len(logs) == 2
     assert logs[0]["id"] == "qa-0"  # 最新在前
     assert logs[0]["citations_json"] == '["doc-hr-05"]'
+    assert logs[0]["conflicts_json"] == '{"doc_a": "doc-hr-03", "doc_b": "doc-hr-04"}'
+    assert logs[1]["conflicts_json"] is None  # 无冲突行保持 NULL

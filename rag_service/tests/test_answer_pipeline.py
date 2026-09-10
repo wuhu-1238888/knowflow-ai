@@ -202,6 +202,76 @@ def test_no_conflicts_returns_none():
     assert result.conflicts is None
 
 
+def test_fallback_conflict_marker_and_two_docs():
+    """真实回归(C13/C14):模型散文并列呈现两个版本但未输出结构化 conflicts →
+    答案含冲突表述且引用恰好双方文档时,规则侧兜底补全一对冲突(2026-09-10 人拍板)。"""
+    draft = AnswerDraft(
+        answer="两份文档对报销上限的规定不一致:一份 100 元,另一份 150 元。",
+        citations=[
+            Citation(index=1, doc_id="doc-a", chunk_id="doc-a-0", quote=""),
+            Citation(index=2, doc_id="doc-b", chunk_id="doc-b-0", quote=""),
+        ],
+        conflicts=None,
+    )
+    pipeline = AnswerPipeline(FakeProvider([draft]))
+    result = pipeline.answer(
+        "问题", [hit("doc-a", text=TEXT_A), hit("doc-b", text=TEXT_B)], mode="hybrid_rerank"
+    )
+    conflict = result.conflicts[0]
+    assert conflict["doc_a"] == "doc-a" and conflict["doc_b"] == "doc-b"
+    # quote 沿用规则侧摘录,必为原文子串
+    assert conflict["quote_a"] in TEXT_A and conflict["quote_b"] in TEXT_B
+
+
+def test_fallback_conflict_no_marker_returns_none():
+    """引用双方文档但答案无冲突表述 → 不兜底(多文档综合回答不误报)。"""
+    draft = AnswerDraft(
+        answer="入职第一周要办理入职手续并开通 IT 账号。",
+        citations=[
+            Citation(index=1, doc_id="doc-a", chunk_id="doc-a-0", quote=""),
+            Citation(index=2, doc_id="doc-b", chunk_id="doc-b-0", quote=""),
+        ],
+        conflicts=None,
+    )
+    pipeline = AnswerPipeline(FakeProvider([draft]))
+    result = pipeline.answer(
+        "问题", [hit("doc-a", text=TEXT_A), hit("doc-b", text=TEXT_B)], mode="hybrid_rerank"
+    )
+    assert result.conflicts is None
+
+
+def test_fallback_conflict_single_doc_returns_none():
+    """答案含冲突表述但引用仅一方文档 → 不兜底。"""
+    draft = AnswerDraft(
+        answer="两份文档规定不一致。",
+        citations=[Citation(index=1, doc_id="doc-a", chunk_id="doc-a-0", quote="")],
+        conflicts=None,
+    )
+    pipeline = AnswerPipeline(FakeProvider([draft]))
+    result = pipeline.answer("问题", [hit("doc-a", text=TEXT_A)], mode="hybrid_rerank")
+    assert result.conflicts is None
+
+
+def test_fallback_conflict_three_docs_returns_none():
+    """答案含冲突表述但引用三方文档 → 不兜底(两两组合误报风险高,只补双方)。"""
+    draft = AnswerDraft(
+        answer="多份文档规定不一致。",
+        citations=[
+            Citation(index=1, doc_id="doc-a", chunk_id="doc-a-0", quote=""),
+            Citation(index=2, doc_id="doc-b", chunk_id="doc-b-0", quote=""),
+            Citation(index=3, doc_id="doc-c", chunk_id="doc-c-0", quote=""),
+        ],
+        conflicts=None,
+    )
+    pipeline = AnswerPipeline(FakeProvider([draft]))
+    result = pipeline.answer(
+        "问题",
+        [hit("doc-a", text=TEXT_A), hit("doc-b", text=TEXT_B), hit("doc-c")],
+        mode="hybrid_rerank",
+    )
+    assert result.conflicts is None
+
+
 # ── 重试策略:LLM 异常 → 降级;schema 失败 → 拒答 ──
 
 def test_llm_exception_retries_then_degrades():

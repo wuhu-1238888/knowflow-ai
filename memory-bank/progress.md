@@ -183,11 +183,17 @@
 
 - **检索层(报告 §2,每格 run-id)**:hybrid_rerank Hit@5 12/12、MRR 0.9583(阈值 11/12、0.8 达标),双锚点批次 164508Z/121215Z 三模式逐格一致 → 可复现性 FR-08 成立;Δ 增益诚实呈现:Vector→Hybrid ΔMRR **-0.0555**(负增益,C05 1→2、C10 2→3)、Hybrid→Rerank **+0.0555**(C05 恢复 1、C10→2)——rerank 的作用是抵消 RRF 融合排序噪声,并给拒答阈值提供分离度最大的口径。
 - **性能 NFR(§2.4,不达标如实记录)**:热态检索 ~31s/问(耗时主体 = reranker CPU 推理 24 个候选全文本 ~28s),NFR「检索 <3s」超标约 10 倍;截断优化实验(200 字)MRR 0.9583→0.8542(C04 1→4、C08 1→2),人拍板回退(commit `18a09ef`),检索性能优化另立任务(候选数 3→2 / ONNX 等,须人拍板 + 重跑评测);评测全量 8 分 2 秒 <10 分钟 ✓。
-- **生成层(§3)**:Mock 结构事实入档(gen-a761359f66d1);**真实 DeepSeek 重跑完成**(2026-09-10,Key 由人写 .env;最终批次 132817Z,run-id vector gen-ed1ff99a8dcd / hybrid gen-b3f6ddcdc2fd / hybrid_rerank gen-99ccfb6c4d33,doc_commit 951c553,skipped 0):拒答 2/2 且 0 误拒、12 例回答全部 ≥1 条引用且**正文标记与引用编号三模式 0 错配**、要点机器预检 11/33(必要不充分)、结构化 conflicts 0 例(C13/C14 散文并列呈现两版本,口径待人拍板);生成 NFR 达标(单次调用 2.17–2.63s)。**缺陷修复故事**:125001Z 3 处错位 → `_renumber_markers` 重写 → 130725Z 反而 7/7/9(同块多摘句 ref_map 覆盖)→ `_to_draft` 重复 ref 仅取首个 → 132817Z 0 错配(两次修复均带单测)。
+- **生成层(§3)**:Mock 结构事实入档(gen-a761359f66d1);**真实 DeepSeek 重跑完成**(2026-09-10,Key 由人写 .env;最终批次 140445Z,run-id vector gen-f56d71886b18 / hybrid gen-60531f721c17 / hybrid_rerank gen-3c1f950c388f,doc_commit bdb4d58,skipped 0):拒答 2/2 且 0 误拒、12 例回答全部 ≥1 条引用且**正文标记与引用编号三模式 0 错配**、要点机器预检 11/33(必要不充分)、**结构化冲突 C13/C14 三模式各 1 对 = 2/2 且其余 12 例零误报**;生成 NFR 达标(单次调用 2.17–2.63s)。**缺陷修复故事**:125001Z 3 处错位 → `_renumber_markers` 重写 → 130725Z 反而 7/7/9(同块多摘句 ref_map 覆盖)→ `_to_draft` 重复 ref 仅取首个 → 132817Z 0 错配但冲突 0/2(模型散文并列但不输出 conflicts 字段)→ **人拍板规则侧兜底**(`_fallback_conflicts`:答案含冲突表述且引用恰好双方文档 → 补全一对)→ 140445Z 全绿(修复均带单测,pytest 186/186)。
 - **报告自检**:137 项程序化核对(报告数字 ↔ run JSON)全部通过;人工逐格核对待人(L4 走查)。
 - **测试**:后端 pytest 181/181(DeepSeekProvider 31 例 + gen_eval 工厂化更新),前端零改动 vitest 133/133。
-- **L4 待人操作**:按 evaluation-report.md §2.1 逐格打开 run JSON 核对数字;review-2026-09-10T132817Z.md 五线人工判定(冲突线 C13/C14 口径先拍板);demo-script 计时复核表页面级亲测(3.4.1 遗留)。
+- **L4 待人操作**:按 evaluation-report.md §2.1 逐格打开 run JSON 核对数字;review-2026-09-10T140445Z.md 五线人工判定;demo-script 计时复核表页面级亲测(3.4.1 遗留)。
 - **下一步**:3.4.3 冲突/删除/再生成联动走查 → 检索性能优化(人拍板后另立)→ 遗留 #1 判定侧人工完成即解除。
+
+### 3.4.3 冲突/删除/再生成联动走查记录(2026-09-10,进行中)
+
+- **冲突结构化兜底已入库**(前置条件,3.4.2 拍板):`_fallback_conflicts` 规则侧补全(答案含冲突表述 + 引用恰好双方文档 → 一对冲突;单方/三方不触发防误报),真实重跑 140445Z 冲突 2/2 零误报;测试 test_answer_pipeline 4 例新建,pytest 186/186。
+- **QA 日志审计补全**:`qa_logs` 增 `conflicts_json` 列(建表 + `_migrate` ALTER 老库补列,老行 NULL 语义不变);`add_qa_log`/`/api/ask` 落库结构化冲突;测试 test_repository(roundtrip 断言 conflicts_json 与 NULL)、test_api_ask(新例:conflicts 非空落库 + 无冲突 NULL)、test_api_feedback(调用点补齐字段)。
+- **待走查**:C13/C14 冲突 UI 真实走查(ConflictPanel 双卡等权/来源抽屉)、删除文档后冲突案例行为、FR-11 重新生成历史可见(页面实测)、QA 日志 citations/conflicts 抽查。
 
 ## 修订
 

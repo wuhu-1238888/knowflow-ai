@@ -205,8 +205,10 @@ class Repository:
         with self._conn() as conn:
             conn.execute(
                 """
-                INSERT INTO qa_logs (id, query, answer, citations_json, no_answer, mode, created_at)
-                VALUES (:id, :query, :answer, :citations_json, :no_answer, :mode, :created_at)
+                INSERT INTO qa_logs
+                  (id, query, answer, citations_json, conflicts_json, no_answer, mode, created_at)
+                VALUES
+                  (:id, :query, :answer, :citations_json, :conflicts_json, :no_answer, :mode, :created_at)
                 """,
                 log,
             )

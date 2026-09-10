@@ -90,6 +90,43 @@ def test_ask_success_full_schema(tmp_path):
     assert logs[0]["no_answer"] == 0
     assert logs[0]["mode"] == "hybrid_rerank"
     assert json.loads(logs[0]["citations_json"]) == body["citations"]
+    assert logs[0]["conflicts_json"] is None  # 无冲突行保持 NULL
+
+
+def test_ask_logs_conflicts_json(tmp_path):
+    """3.4.3 审计补全:结构化冲突随 QA 日志落库(conflicts_json)。"""
+    from rag_service.llm_adapter import AnswerDraft, Citation, Conflict
+
+    class ConflictProvider:
+        def generate(self, query, chunks):
+            return AnswerDraft(
+                answer="两份文档规定不一致:一份 100 元,另一份 150 元。",
+                citations=[
+                    Citation(index=1, doc_id="doc-a", chunk_id="doc-a-0", quote=""),
+                    Citation(index=2, doc_id="doc-b", chunk_id="doc-b-0", quote=""),
+                ],
+                conflicts=[
+                    Conflict(doc_a="doc-a", doc_b="doc-b", quote_a="甲", quote_b="乙")
+                ],
+            )
+
+    hits = [
+        SearchHit(
+            chunk_id="doc-a-0", doc_id="doc-a", text="甲。", score=0.9,
+            source="hybrid", rerank_score=0.9, vec_score=0.9,
+        ),
+        SearchHit(
+            chunk_id="doc-b-0", doc_id="doc-b", text="乙。", score=0.8,
+            source="hybrid", rerank_score=0.8, vec_score=0.8,
+        ),
+    ]
+    client, repo = make_client(tmp_path, hits=hits, provider=ConflictProvider())
+    resp = client.post("/api/ask", json={"query": "报销上限?", "mode": "hybrid_rerank"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["conflicts"] is not None
+    logs = repo.list_qa_logs()
+    assert json.loads(logs[0]["conflicts_json"]) == body["conflicts"]
 
 
 def test_ask_enriches_citation_with_document_metadata(tmp_path):
