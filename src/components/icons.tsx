@@ -140,3 +140,11 @@ export function IconTrash(props: SVGProps<SVGSVGElement>) {
     </Base>
   );
 }
+
+export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Base {...props}>
+      <path d="M4 6l4 4 4-4" />
+    </Base>
+  );
+}

@@ -114,7 +114,8 @@ describe("EvidenceItem 结构与双向联动", () => {
     fireEvent.mouseEnter(chip);
     const item = screen.getByRole("listitem");
     expect(item.className).toContain("border-brand-600");
-    const highlighted = container.querySelector(".bg-brand-50");
+    // 查询收敛到回答正文段内(「最新」标同用 brand-50,不在 p 内)
+    const highlighted = container.querySelector("p .bg-brand-50");
     expect(highlighted).toBeTruthy();
     expect(highlighted?.textContent).toContain("年假");
   });
@@ -124,9 +125,9 @@ describe("EvidenceItem 结构与双向联动", () => {
       <AnswerSheet answer="年假 [1] 天。" citations={[CITATION]} />,
     );
     fireEvent.mouseEnter(screen.getByRole("listitem"));
-    expect(container.querySelector(".bg-brand-50")).toBeTruthy();
+    expect(container.querySelector("p .bg-brand-50")).toBeTruthy();
     fireEvent.mouseLeave(screen.getByRole("listitem"));
-    expect(container.querySelector(".bg-brand-50")).toBeNull();
+    expect(container.querySelector("p .bg-brand-50")).toBeNull();
   });
 
   it("超长引用片段默认 4 行收起,可展开/收起", () => {
@@ -235,5 +236,55 @@ describe("操作行:重新生成 / 有用·无用", () => {
     render(<AnswerSheet answer="答案" citations={[CITATION]} />);
     fireEvent.click(screen.getByRole("button", { name: "有用" }));
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("版本管理(3.4.4):最新主卡 / 上一版弱化 / 加载态 / 一致提示", () => {
+  it("latest 默认变体:眉题「AI 回答」+「最新」标 + 版本标注 + 完整操作行", () => {
+    render(
+      <AnswerSheet
+        answer="答案正文"
+        citations={[CITATION]}
+        versionMeta="v2 · 刚刚生成"
+      />,
+    );
+    expect(screen.getByText("AI 回答")).toBeTruthy();
+    expect(screen.getByText("最新")).toBeTruthy();
+    expect(screen.getByText("v2 · 刚刚生成")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "重新生成" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "复制回答" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "有用" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "无用" })).toBeTruthy();
+  });
+
+  it("previous 变体:眉题「上一版回答」,无「最新」标,操作行仅复制回答", () => {
+    render(
+      <AnswerSheet variant="previous" answer="旧答案" citations={[CITATION]} />,
+    );
+    expect(screen.getByText("上一版回答")).toBeTruthy();
+    expect(screen.queryByText("最新")).toBeNull();
+    expect(screen.queryByRole("button", { name: "重新生成" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "有用" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "无用" })).toBeNull();
+    expect(screen.getByRole("button", { name: "复制回答" })).toBeTruthy();
+  });
+
+  it("generating:卡内加载态(单请求单文案,不伪造多阶段),无正文/依据/操作行", () => {
+    render(<AnswerSheet answer="旧答案" citations={[CITATION]} generating />);
+    expect(screen.getByText("AI 回答")).toBeTruthy();
+    expect(screen.getByText("正在重新生成")).toBeTruthy();
+    expect(screen.getByText("正在重新生成回答…")).toBeTruthy();
+    expect(screen.getByText("正在检索企业知识库并生成回答")).toBeTruthy();
+    expect(screen.queryByText("旧答案")).toBeNull();
+    expect(screen.queryByRole("button", { name: "重新生成" })).toBeNull();
+    expect(screen.queryByText(/依据与来源/)).toBeNull();
+  });
+
+  it("sameNotice:显示「本次回答与上一版一致」提示,不新增卡片", () => {
+    render(<AnswerSheet answer="答案正文" citations={[CITATION]} sameNotice />);
+    expect(
+      screen.getByText("已完成重新生成,本次回答与上一版一致。"),
+    ).toBeTruthy();
+    expect(screen.getByText("答案正文")).toBeTruthy();
   });
 });

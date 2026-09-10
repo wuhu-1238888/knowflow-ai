@@ -184,38 +184,19 @@ describe("AskPage 回答流", () => {
   });
 });
 
-describe("AskPage 重新生成与回答堆叠(FR-11)", () => {
-  it("重新生成:再次请求同一问题,新回答在上、旧回答仍可见", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          ...ANSWER_RESPONSE,
-          qa_id: "qa-test-4",
-          answer: "重新生成的回答[1]。",
-        }),
-      );
-    vi.stubGlobal("fetch", fetchMock);
+describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
+  it("首次回答:最新主卡带「最新」标与版本标注,不出现「上一版回答」", async () => {
+    stubFetch(async () => jsonResponse(ANSWER_RESPONSE));
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
     await screen.findByText(/入职第一年享有 8 天 年假/);
-
-    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
-    await screen.findByText(/重新生成的回答/);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    // 两个 AnswerSheet 并存:新回答在上(先渲染),旧回答仍可见
-    expect(screen.getAllByText("AI 回答")).toHaveLength(2);
-    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
-    // 第二次请求仍带同一问题与默认策略
-    expect(requestBody(fetchMock, 1)).toEqual({
-      query: "年假有几天?",
-      mode: "hybrid_rerank",
-    });
+    expect(screen.getByText("最新")).toBeTruthy();
+    expect(screen.getByText("v1 · 刚刚生成")).toBeTruthy();
+    expect(screen.queryByText("上一版回答")).toBeNull();
   });
 
-  it("重新生成期间旧回答仍可见,加载完成后新回答在上", async () => {
+  it("重新生成:卡内加载态(无首次提问胶囊);成功后新回答最新 v2,旧回答折叠为上一版", async () => {
     let resolveSecond!: (response: Response) => void;
     const fetchMock = vi
       .fn()
@@ -232,22 +213,140 @@ describe("AskPage 重新生成与回答堆叠(FR-11)", () => {
     await screen.findByText(/入职第一年享有 8 天 年假/);
 
     fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
-    expect(screen.getByText("AI 生成中")).toBeTruthy();
-    // 加载期间旧回答仍可见(FR-11)
-    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
-    expect(screen.getAllByText("AI 回答")).toHaveLength(1);
+    // 重新生成的加载态在最新卡片内,不显示首次提问胶囊,也不伪造多阶段
+    expect(screen.getByText("正在重新生成回答…")).toBeTruthy();
+    expect(screen.getByText("正在检索企业知识库并生成回答")).toBeTruthy();
+    expect(screen.queryByText("AI 生成中")).toBeNull();
 
     resolveSecond(
       jsonResponse({
         ...ANSWER_RESPONSE,
-        qa_id: "qa-test-5",
-        answer: "第二次回答[1]。",
+        qa_id: "qa-test-4",
+        answer: "重新生成的回答[1]。",
       }),
     );
-    await screen.findByText(/第二次回答/);
-    expect(screen.queryByText("AI 生成中")).toBeNull();
-    expect(screen.getAllByText("AI 回答")).toHaveLength(2);
+    await screen.findByText(/重新生成的回答/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // 新回答 = 唯一主卡(最新 v2);旧回答默认折叠,正文不可见,不与新回答平级
+    expect(screen.getByText("v2 · 刚刚生成")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /上一版回答/ })).toBeTruthy();
+    expect(screen.queryByText(/入职第一年享有 8 天 年假/)).toBeNull();
+    // 展开上一版 → 旧回答可见
+    fireEvent.click(screen.getByRole("button", { name: /上一版回答/ }));
     expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    // 第二次请求仍带同一问题与默认策略
+    expect(requestBody(fetchMock, 1)).toEqual({
+      query: "年假有几天?",
+      mode: "hybrid_rerank",
+    });
+  });
+
+  it("连续重新生成:v3 最新,v2 降为上一版,v1 让位(版本序号连续)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(
+        jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-a", answer: "第二版回答[1]。" }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-b", answer: "第三版回答[1]。" }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    await screen.findByText(/第二版回答/);
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    await screen.findByText(/第三版回答/);
+
+    expect(screen.getByText("v3 · 刚刚生成")).toBeTruthy();
+    // 上一版槽 = v2(被 v3 顶下来的最新版本),v1 不再保留(MVP 口径)
+    expect(screen.getByRole("button", { name: /v2/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /上一版回答/ }));
+    expect(screen.getByText(/第二版回答/)).toBeTruthy();
+    expect(screen.queryByText(/入职第一年享有 8 天 年假/)).toBeNull();
+  });
+
+  it("新旧内容一致:明确提示,不复制旧卡片(仅一张主卡,版本不变)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-new" }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    expect(
+      await screen.findByText("已完成重新生成,本次回答与上一版一致。"),
+    ).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText(/入职第一年享有 8 天 年假/)).toHaveLength(1);
+    expect(screen.getAllByText("AI 回答")).toHaveLength(1);
+    expect(screen.getByText("v1 · 刚刚生成")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /上一版回答/ })).toBeNull();
+  });
+
+  it("重新生成失败:错误卡显示,最新回答内容与版本恢复", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockRejectedValueOnce(new TypeError("fetch failed"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    expect(await screen.findByText("回答失败")).toBeTruthy();
+    // 卡内加载态消失,原回答恢复,无「上一版回答」(失败不产生版本)
+    expect(screen.queryByText("正在重新生成回答…")).toBeNull();
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    expect(screen.getByText("v1 · 刚刚生成")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /上一版回答/ })).toBeNull();
+  });
+
+  it("重新生成得到拒答:拒答卡为当前结果,原回答降级「上一版回答」", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse({ ...REFUSE_RESPONSE, qa_id: "qa-refuse-2" }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    expect(await screen.findByText("知识库中未找到答案")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /上一版回答/ }));
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+  });
+
+  it("冲突随版本存储:新版本冲突更新,旧版本冲突随上一版展开呈现(不串版本)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(CONFLICT_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-plain" }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AskPage />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "市内交通费每天报销上限是多少?" }),
+    );
+    await screen.findByText("口径不一致");
+    expect(screen.getByText(/上限 100 元/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    // 新版本无冲突 → 主卡下方无冲突面板
+    expect(screen.queryByText("口径不一致")).toBeNull();
+    // 旧版本冲突随上一版展开呈现,不与新回答混排
+    fireEvent.click(screen.getByRole("button", { name: /上一版回答/ }));
+    expect(screen.getByText("口径不一致")).toBeTruthy();
+    expect(screen.getByText(/上限 150 元/)).toBeTruthy();
   });
 
   it("有用:点选后 POST /api/qa/:qa_id/feedback(页面层 FR-12)", async () => {

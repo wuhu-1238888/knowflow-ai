@@ -7,6 +7,7 @@ import { EvidenceItem } from "@/components/ask/evidence-item";
 import { SourceDrawer } from "@/components/ask/source-drawer";
 import {
   IconCopy,
+  IconInfo,
   IconRefresh,
   IconThumbDown,
   IconThumbUp,
@@ -20,7 +21,11 @@ import { sendFeedback, type Citation, type FeedbackRating } from "@/lib/rag";
    (brand-600 描边 + 滚动进入视口);点 chip 或「查看原文」滑出来源抽屉。
    2026-09-09 人拍板:元信息行不暴露检索策略与工程调试值(模式徽标/最高分/耗时),
    仅保留用户价值信息「已基于企业知识库检索 · 依据 n 条」;三模式对比见评测页。
-   反馈 FR-12:有用/无用乐观更新,失败静默回退(暂无 Toast 组件,记遗留)。 */
+   反馈 FR-12:有用/无用乐观更新,失败静默回退(暂无 Toast 组件,记遗留)。
+   版本管理(3.4.4):variant latest = 主卡(「AI 回答 · 最新」+ 版本标注 +
+   完整操作行);previous = 历史版本(「上一版回答」,仅复制操作,边框由外层
+   折叠容器提供);generating = 卡内加载态(重新生成中,真实单请求单文案,
+   不伪造多阶段);sameNotice = 新旧内容一致提示(不复制旧卡片伪装新结果)。 */
 
 export function formatAnswer(answer: string): string {
   return answer
@@ -60,6 +65,16 @@ export interface AnswerSheetProps {
   citations: Citation[];
   qaId?: string;
   onRegenerate?: () => void;
+  /* 版本管理(3.4.4):latest 主卡 / previous 历史版本(弱化,仅复制操作)。 */
+  variant?: "latest" | "previous";
+  /** 眉题右侧轻量版本信息(如「v2 · 刚刚生成」),仅 latest 使用。 */
+  versionMeta?: string;
+  /** 重新生成中:卡片内容替换为加载态(旧内容在状态机中保留,失败可恢复)。 */
+  generating?: boolean;
+  /** 本次重新生成结果与上一版一致:明确提示,不复制旧卡片伪装新结果。 */
+  sameNotice?: boolean;
+  /** 外层边框;previous 折叠容器自带边框时关闭(默认开)。 */
+  frame?: boolean;
 }
 
 export function AnswerSheet({
@@ -67,6 +82,11 @@ export function AnswerSheet({
   citations,
   qaId,
   onRegenerate,
+  variant = "latest",
+  versionMeta,
+  generating = false,
+  sameNotice = false,
+  frame = true,
 }: AnswerSheetProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [drawer, setDrawer] = useState<Citation | null>(null);
@@ -96,118 +116,171 @@ export function AnswerSheet({
     }
   }
 
+  const isLatest = variant === "latest";
+
   return (
     <section
       aria-label="回答"
-      className="rounded-lg border border-hairline bg-surface"
+      className={frame ? "rounded-lg border border-hairline bg-surface" : ""}
     >
-      <div className="border-b border-hairline px-4 py-3">
-        {/* 元信息行:依据数用 numeric token(DesignRules「数字」) */}
-        <div className="flex flex-wrap items-center gap-2 text-body-sm text-ink-2">
-          <span>已基于企业知识库检索</span>
-          <span aria-hidden="true">·</span>
-          <span>
-            依据 <span className="text-numeric">{citations.length}</span> 条
-          </span>
-        </div>
-      </div>
-      <div className="px-4 py-4">
-        {/* AI 眉题:渐变 8px 圆点(渐变白名单第 2 处)+ micro 标签 */}
-        <div className="mb-2 flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2 rounded-full bg-ai-gradient" />
-          <span className="text-micro font-medium text-ink-3">AI 回答</span>
-        </div>
-        <p className="whitespace-pre-line text-body-lg text-ink">
-          {segments.map((segment, i) => {
-            if (segment.index === null) {
-              /* 引用句高亮:紧随其后 chip 被悬停时,brand-50 底(双向联动) */
-              const next = segments[i + 1];
-              const highlighted =
-                next !== undefined &&
-                next.index !== null &&
-                next.index === activeIndex;
-              return (
-                <span key={i} className={highlighted ? "rounded-sm bg-brand-50" : undefined}>
-                  {segment.text}
+      {generating ? (
+        <>
+          <div className="border-b border-hairline px-4 py-3">
+            <div className="flex items-center gap-1.5">
+              <span aria-hidden="true" className="size-2 rounded-full bg-ai-gradient" />
+              <span className="text-micro font-medium text-ink-3">AI 回答</span>
+              <span className="text-caption text-ink-3">正在重新生成</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1 px-4 py-4">
+            <p className="text-body-md text-ink-2">正在重新生成回答…</p>
+            <p className="text-caption text-ink-3">正在检索企业知识库并生成回答</p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="border-b border-hairline px-4 py-3">
+            {/* 元信息行:依据数用 numeric token(DesignRules「数字」) */}
+            <div className="flex flex-wrap items-center gap-2 text-body-sm text-ink-2">
+              <span>已基于企业知识库检索</span>
+              <span aria-hidden="true">·</span>
+              <span>
+                依据 <span className="text-numeric">{citations.length}</span> 条
+              </span>
+            </div>
+          </div>
+          {sameNotice ? (
+            <div className="flex items-center gap-2 border-b border-hairline px-4 py-2.5">
+              <IconInfo className="size-4 text-ink-3" />
+              <p className="text-body-sm text-ink-2">
+                已完成重新生成,本次回答与上一版一致。
+              </p>
+            </div>
+          ) : null}
+          <div className="px-4 py-4">
+            {/* AI 眉题:渐变 8px 圆点(渐变白名单第 2 处)+ micro 标签 + 版本标注 */}
+            <div className="mb-2 flex items-center gap-1.5">
+              <span aria-hidden="true" className="size-2 rounded-full bg-ai-gradient" />
+              <span className="text-micro font-medium text-ink-3">
+                {isLatest ? "AI 回答" : "上一版回答"}
+              </span>
+              {isLatest ? (
+                <span className="rounded-sm bg-brand-50 px-1.5 py-0.5 text-caption text-brand-800">
+                  最新
                 </span>
-              );
-            }
-            const citation = citationByIndex.get(segment.index);
-            return (
-              <CitationChip
-                key={i}
-                index={segment.index}
-                missing={citation === undefined}
-                active={activeIndex === segment.index}
-                onHover={setActiveIndex}
+              ) : null}
+              {versionMeta ? (
+                <span className="ml-auto text-caption text-ink-3">{versionMeta}</span>
+              ) : null}
+            </div>
+            <p className="whitespace-pre-line text-body-lg text-ink">
+              {segments.map((segment, i) => {
+                if (segment.index === null) {
+                  /* 引用句高亮:紧随其后 chip 被悬停时,brand-50 底(双向联动) */
+                  const next = segments[i + 1];
+                  const highlighted =
+                    next !== undefined &&
+                    next.index !== null &&
+                    next.index === activeIndex;
+                  return (
+                    <span key={i} className={highlighted ? "rounded-sm bg-brand-50" : undefined}>
+                      {segment.text}
+                    </span>
+                  );
+                }
+                const citation = citationByIndex.get(segment.index);
+                return (
+                  <CitationChip
+                    key={i}
+                    index={segment.index}
+                    missing={citation === undefined}
+                    active={activeIndex === segment.index}
+                    onHover={setActiveIndex}
+                    onClick={() => {
+                      if (citation) {
+                        setDrawer(citation);
+                      }
+                    }}
+                  />
+                );
+              })}
+            </p>
+          </div>
+          {citations.length > 0 ? (
+            <div className="border-t border-hairline px-4 py-3">
+              <h2 className="mb-2 text-heading-3 font-medium text-ink">
+                依据与来源({citations.length})
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {citations.map((citation) => (
+                  <EvidenceItem
+                    key={citation.chunk_id}
+                    citation={citation}
+                    active={activeIndex === citation.index}
+                    onHover={setActiveIndex}
+                    onOpen={setDrawer}
+                  />
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-1 border-t border-hairline px-4 py-2.5">
+            {isLatest ? (
+              <>
+                <Button variant="secondary" size="md" onClick={onRegenerate}>
+                  <IconRefresh className="size-4" />
+                  重新生成
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(answer);
+                  }}
+                >
+                  <IconCopy className="size-4" />
+                  复制回答
+                </Button>
+                <span className="ml-2 flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    aria-pressed={feedback.rating === "useful"}
+                    disabled={feedback.pending}
+                    onClick={() => void submitFeedback("useful")}
+                    className={feedback.rating === "useful" ? "text-brand-800" : ""}
+                  >
+                    <IconThumbUp className="size-4" />
+                    有用
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    aria-pressed={feedback.rating === "useless"}
+                    disabled={feedback.pending}
+                    onClick={() => void submitFeedback("useless")}
+                    className={feedback.rating === "useless" ? "text-brand-800" : ""}
+                  >
+                    <IconThumbDown className="size-4" />
+                    无用
+                  </Button>
+                </span>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="md"
                 onClick={() => {
-                  if (citation) {
-                    setDrawer(citation);
-                  }
+                  void navigator.clipboard?.writeText(answer);
                 }}
-              />
-            );
-          })}
-        </p>
-      </div>
-      {citations.length > 0 ? (
-        <div className="border-t border-hairline px-4 py-3">
-          <h2 className="mb-2 text-heading-3 font-medium text-ink">
-            依据与来源({citations.length})
-          </h2>
-          <ul className="flex flex-col gap-2">
-            {citations.map((citation) => (
-              <EvidenceItem
-                key={citation.chunk_id}
-                citation={citation}
-                active={activeIndex === citation.index}
-                onHover={setActiveIndex}
-                onOpen={setDrawer}
-              />
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      <div className="flex flex-wrap items-center gap-1 border-t border-hairline px-4 py-2.5">
-        <Button variant="secondary" size="md" onClick={onRegenerate}>
-          <IconRefresh className="size-4" />
-          重新生成
-        </Button>
-        <Button
-          variant="ghost"
-          size="md"
-          onClick={() => {
-            void navigator.clipboard?.writeText(answer);
-          }}
-        >
-          <IconCopy className="size-4" />
-          复制回答
-        </Button>
-        <span className="ml-2 flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="md"
-            aria-pressed={feedback.rating === "useful"}
-            disabled={feedback.pending}
-            onClick={() => void submitFeedback("useful")}
-            className={feedback.rating === "useful" ? "text-brand-800" : ""}
-          >
-            <IconThumbUp className="size-4" />
-            有用
-          </Button>
-          <Button
-            variant="ghost"
-            size="md"
-            aria-pressed={feedback.rating === "useless"}
-            disabled={feedback.pending}
-            onClick={() => void submitFeedback("useless")}
-            className={feedback.rating === "useless" ? "text-brand-800" : ""}
-          >
-            <IconThumbDown className="size-4" />
-            无用
-          </Button>
-        </span>
-      </div>
+              >
+                <IconCopy className="size-4" />
+                复制回答
+              </Button>
+            )}
+          </div>
+        </>
+      )}
       {drawer ? (
         <SourceDrawer citation={drawer} onClose={() => setDrawer(null)} />
       ) : null}
