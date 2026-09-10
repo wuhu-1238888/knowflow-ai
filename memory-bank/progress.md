@@ -226,6 +226,18 @@
 - **测试**:vitest 155/155(新增 6:ConflictPanel 默认收起/展开收起/富化+抽屉/降级/多对去重计数 + AnswerSheet 冲突位置 DOM 顺序断言);typecheck 干净;dev server 热编译无错、页面 200。零新依赖;未动检索策略/评测页/文档库/布局。
 - **L4 待人操作(浏览器,约 3 分钟)**:问 C13「市内交通费每天报销上限是多少?」→ 回答卡内出现轻量提示(默认收起)→ 点「查看冲突来源」→ 两份来源卡带标题/上传时间 → 点「查看原文」滑出抽屉 → 重新生成后确认新版本冲突归属正确;再问「年假有几天?」(无冲突)确认不显示提示。
 
+### 3.4.6 回答操作反馈优化(2026-09-10,机器侧完成)
+
+> 人下达(2026-09-10):点「有用/无用」后页面几乎无变化、点「复制回答」零反馈,用户不知道操作是否成功。要求:按钮选中态为主(非 Toast 轰炸)、真实 Clipboard 结果反馈、失败可读且不暴露技术错误、反馈按 Answer Version 绑定并可持久化恢复。
+
+- **有用/无用选中态**:互斥选中(brand-50 浅底 + brand-800 深紫字 + aria-pressed),每 Answer Version 只保留一个状态;重复点击同一项保持选中、不重复提交(前端 guard,MVP 不做取消);pending 时两键禁用防重复点击(四态:disabled → pending → success/error)。
+- **失败恢复 + 轻量提示**:提交失败恢复原选中态 + 按钮旁一行小字「反馈提交失败,请重试」(text-caption danger-text,aria-live,3s 自动消失);技术细节只进 console.warn。不用 Toast、不做按钮变色+Toast+页面提示叠加。
+- **复制回答反馈**:仅真实 `navigator.clipboard.writeText` promise 成功后才显示「✓ 已复制」(success-text,1.8s 后恢复「复制回答」);失败/API 不可用 →「复制失败,请重试」(danger-text,同 1.8s 恢复),不暴露 NotAllowedError 等技术错误(只进 console);复制内容 = AI 回答原文(不改既有复制数据契约)。
+- **按版本绑定 + 持久化恢复**:反馈始终 POST 到该版本的 qa_id(每次重新生成 = 新 qa_id,天然独立,零数据架构改动);AnswerSheet 挂载时 GET `/api/qa/{id}/feedback` 恢复持久化状态(刷新/展开上一版不丢;404/未评价 → 未选中;读取失败静默不阻塞)。**恢复读取不锁定按钮**(避免回答刚出现时反馈按钮禁用闪烁、吞点击),若用户已在读取完成前提交,以用户提交为准(interactedRef 忽略过期读取结果)。上一版回答同样具备复制+反馈入口(3.4.4「仅复制」由本任务扩展,反馈独立存取不串版本)。
+- **后端新增**:GET /api/qa/{qa_id}/feedback(未提交 → rating null;未知 QA → 404),BFF 同路径 GET 代理 + client getFeedback。生成中卡片无操作行 → 失效版本不可反馈(3.4.4 已保证)。
+- **测试**:vitest 167/167(新增 12:互斥/防重/挂载恢复/失败恢复+自动消失/previous 按版本绑定/复制成功/被拒/不可用 + getFeedback client 4 + BFF GET 转发;page.test 引入 stubFetchWithFeedback 统一回 null、askCalls 只数业务请求);pytest 188/188(新增 GET 回读 2);typecheck 干净;dev server 重启后实机走通 ask → GET null → POST useful → GET useful → 404。零新依赖;未动检索策略/评测页/文档库/布局。
+- **L4 待人操作(浏览器,约 3 分钟)**:提问「年假有几天?」→ 点「有用」变紫底选中、再点「无用」切换 → 点「复制回答」变「✓ 已复制」约 1.8s 后恢复(粘贴验证内容=回答正文)→ 刷新页面确认选中态恢复 → 重新生成后:新版本无选中、展开上一版(若已点过)仍保留自己的选中 → 断网(DevTools Offline)点「有用」→「反馈提交失败,请重试」3s 消失。
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->

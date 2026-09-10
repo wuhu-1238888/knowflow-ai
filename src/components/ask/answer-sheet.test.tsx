@@ -1,11 +1,20 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Citation, ConflictItem } from "@/lib/rag";
 import { AnswerSheet, formatAnswer, parseAnswerSegments } from "./answer-sheet";
 
 /* L3 组件测试(3.3.2 全量):formatAnswer 清洗 / 引用段解析 / chip 渲染与灰态 /
-   双向联动 / 来源抽屉 / 操作行(重新生成·复制·有用·无用)。 */
+   双向联动 / 来源抽屉 / 操作行(重新生成·复制·有用·无用)。
+   3.4.6 操作反馈:互斥选中 / 防重复提交 / 失败恢复+提示 / 挂载恢复持久化 /
+   复制反馈(真实 Clipboard 结果),fake timers 推进反馈自动恢复。 */
 
 const CITATION: Citation = {
   index: 1,
@@ -30,6 +39,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
+  // 清理复制测试定义的 clipboard stub(jsdom 无原生实现)
+  delete (navigator as unknown as { clipboard?: unknown }).clipboard;
 });
 
 describe("formatAnswer", () => {
@@ -190,44 +202,31 @@ describe("操作行:重新生成 / 有用·无用", () => {
     expect(onRegenerate).toHaveBeenCalledTimes(1);
   });
 
-  it("有用:POST /api/qa/:id/feedback 带 rating,乐观选中;失败静默回退", async () => {
-    const fetchMock = vi.fn(async () =>
-      jsonResponse({ qa_id: "qa-1", rating: "useful" }),
+  it("有用:POST /api/qa/:id/feedback 带 rating,选中(brand-50 底 + aria-pressed)", async () => {
+    // 3.4.6 起挂载先发 GET 恢复持久化反馈,此处恒回 null;POST 按提交落库
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (
+          (init?.method ?? "GET") === "GET" &&
+          String(input).includes("/feedback")
+        ) {
+          return jsonResponse({ rating: null });
+        }
+        return jsonResponse({ qa_id: "qa-1", rating: "useful" });
+      },
     );
     vi.stubGlobal("fetch", fetchMock);
     render(
       <AnswerSheet answer="答案" citations={[CITATION]} qaId="qa-1" />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "有用" }));
-    await waitFor(() => {
-      expect(
-        (screen.getByRole("button", { name: "有用" }) as HTMLButtonElement)
-          .getAttribute("aria-pressed"),
-      ).toBe("true");
-    });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/qa/qa-1/feedback",
-      expect.objectContaining({ method: "POST" }),
-    );
-    const init = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
-    expect(JSON.parse(String(init.body))).toEqual({ rating: "useful" });
-  });
-
-  it("有用失败:回退为未选中且不抛错(暂无 Toast,记遗留)", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => jsonResponse({ error: "QA 记录不存在" }, 404)),
-    );
-    render(
-      <AnswerSheet answer="答案" citations={[CITATION]} qaId="qa-1" />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "有用" }));
-    await waitFor(() => {
-      expect(
-        (screen.getByRole("button", { name: "有用" }) as HTMLButtonElement)
-          .getAttribute("aria-pressed"),
-      ).toBe("false");
-    });
+    const useful = screen.getByRole("button", { name: "有用" }) as HTMLButtonElement;
+    // 3.4.6:恢复读取不锁定按钮,点击立即生效(用户提交优先于读取结果)
+    fireEvent.click(useful);
+    await waitFor(() => expect(useful.getAttribute("aria-pressed")).toBe("true"));
+    expect(useful.className).toContain("bg-brand-50");
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(post?.[0]).toBe("/api/qa/qa-1/feedback");
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ rating: "useful" });
   });
 
   it("无 qaId 时点有用不发请求(测试夹具场景)", () => {
@@ -236,6 +235,207 @@ describe("操作行:重新生成 / 有用·无用", () => {
     render(<AnswerSheet answer="答案" citations={[CITATION]} />);
     fireEvent.click(screen.getByRole("button", { name: "有用" }));
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("操作反馈(3.4.6):互斥 / 防重 / 失败恢复 / 挂载恢复", () => {
+  function stubFeedbackFetch(getRating: string | null = null) {
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (
+          (init?.method ?? "GET") === "GET" &&
+          String(input).includes("/feedback")
+        ) {
+          return jsonResponse({ rating: getRating });
+        }
+        return jsonResponse({ qa_id: "qa-1", rating: "useful" });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  async function renderWithFeedback(qaId = "qa-1") {
+    render(<AnswerSheet answer="答案正文" citations={[CITATION]} qaId={qaId} />);
+  }
+
+  it("互斥选中:点有用选中,再点无用切换(每个版本只有一个状态)", async () => {
+    stubFeedbackFetch();
+    await renderWithFeedback();
+    const useful = screen.getByRole("button", { name: "有用" }) as HTMLButtonElement;
+    const useless = screen.getByRole("button", { name: "无用" }) as HTMLButtonElement;
+    fireEvent.click(useful);
+    await waitFor(() => expect(useful.getAttribute("aria-pressed")).toBe("true"));
+    expect(useful.className).toContain("bg-brand-50");
+    expect(useless.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(useless);
+    await waitFor(() => expect(useless.getAttribute("aria-pressed")).toBe("true"));
+    expect(useful.getAttribute("aria-pressed")).toBe("false");
+    expect(useful.className).not.toContain("bg-brand-50");
+    expect(useless.className).toContain("bg-brand-50");
+  });
+
+  it("重复点击同一项:保持选中,不重复提交(仅一次 POST)", async () => {
+    const fetchMock = stubFeedbackFetch();
+    await renderWithFeedback();
+    fireEvent.click(screen.getByRole("button", { name: "有用" }));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "有用" }) as HTMLButtonElement)
+          .getAttribute("aria-pressed"),
+      ).toBe("true"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "有用" }));
+    const posts = fetchMock.mock.calls.filter(([, init]) => init?.method === "POST");
+    expect(posts).toHaveLength(1);
+    expect(
+      (screen.getByRole("button", { name: "有用" }) as HTMLButtonElement)
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  it("挂载恢复持久化反馈:GET 返回 useless → 无需点击即选中(刷新不丢)", async () => {
+    stubFeedbackFetch("useless");
+    render(<AnswerSheet answer="答案正文" citations={[CITATION]} qaId="qa-1" />);
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "无用" }) as HTMLButtonElement)
+          .getAttribute("aria-pressed"),
+      ).toBe("true"),
+    );
+    expect(
+      (screen.getByRole("button", { name: "有用" }) as HTMLButtonElement)
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+  });
+
+  it("提交失败:恢复未选中 + 轻量提示「反馈提交失败,请重试」,3s 后自动消失", async () => {
+    vi.useFakeTimers();
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => jsonResponse({ error: "QA 记录不存在" }, 404)),
+      );
+      render(<AnswerSheet answer="答案正文" citations={[CITATION]} qaId="qa-1" />);
+      const useful = screen.getByRole("button", { name: "有用" }) as HTMLButtonElement;
+      fireEvent.click(useful);
+      await act(async () => {});
+      expect(useful.getAttribute("aria-pressed")).toBe("false");
+      expect(screen.getByText("反馈提交失败,请重试")).toBeTruthy();
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(screen.queryByText("反馈提交失败,请重试")).toBeNull();
+    } finally {
+      consoleWarn.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("previous 变体:复制 + 有用/无用绑定自己的 qa_id(按版本独立,不串到最新)", async () => {
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (
+          (init?.method ?? "GET") === "GET" &&
+          String(input).includes("/feedback")
+        ) {
+          return jsonResponse({ rating: null });
+        }
+        return jsonResponse({ qa_id: "qa-old", rating: "useful" });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <AnswerSheet
+        variant="previous"
+        answer="旧答案"
+        citations={[CITATION]}
+        qaId="qa-old"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "复制回答" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "有用" }));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "有用" }) as HTMLButtonElement)
+          .getAttribute("aria-pressed"),
+      ).toBe("true"),
+    );
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(post?.[0]).toBe("/api/qa/qa-old/feedback");
+  });
+});
+
+describe("复制回答反馈(3.4.6)", () => {
+  function stubClipboard(writeText: (text: string) => Promise<void>) {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+  }
+
+  it("复制成功:仅真实 Clipboard 成功后显示「✓ 已复制」,1.8s 后恢复", async () => {
+    vi.useFakeTimers();
+    try {
+      const writeText = vi.fn(async () => {});
+      stubClipboard(writeText);
+      render(<AnswerSheet answer="答案正文" citations={[CITATION]} />);
+      fireEvent.click(screen.getByRole("button", { name: "复制回答" }));
+      await act(async () => {});
+      // 复制内容 = AI 回答原文(不改既有复制数据契约)
+      expect(writeText).toHaveBeenCalledWith("答案正文");
+      const copied = screen.getByRole("button", { name: "✓ 已复制" });
+      expect(copied.className).toContain("text-success-text");
+      act(() => {
+        vi.advanceTimersByTime(1800);
+      });
+      expect(screen.getByRole("button", { name: "复制回答" })).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("复制失败(Clipboard 被拒):「复制失败,请重试」后恢复,不暴露技术错误", async () => {
+    vi.useFakeTimers();
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      stubClipboard(async () => {
+        throw new DOMException("denied", "NotAllowedError");
+      });
+      render(<AnswerSheet answer="答案正文" citations={[CITATION]} />);
+      fireEvent.click(screen.getByRole("button", { name: "复制回答" }));
+      await act(async () => {});
+      expect(screen.getByRole("button", { name: "复制失败,请重试" })).toBeTruthy();
+      expect(screen.queryByText(/NotAllowedError/)).toBeNull();
+      expect(consoleWarn).toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1800);
+      });
+      expect(screen.getByRole("button", { name: "复制回答" })).toBeTruthy();
+    } finally {
+      consoleWarn.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("Clipboard 不可用:走失败反馈,不静默、不抛错", async () => {
+    vi.useFakeTimers();
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      Object.defineProperty(navigator, "clipboard", {
+        value: undefined,
+        configurable: true,
+      });
+      render(<AnswerSheet answer="答案正文" citations={[CITATION]} />);
+      fireEvent.click(screen.getByRole("button", { name: "复制回答" }));
+      await act(async () => {});
+      expect(screen.getByRole("button", { name: "复制失败,请重试" })).toBeTruthy();
+      expect(consoleWarn).not.toHaveBeenCalled();
+    } finally {
+      consoleWarn.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -257,15 +457,16 @@ describe("版本管理(3.4.4):最新主卡 / 上一版弱化 / 加载态 / 一�
     expect(screen.getByRole("button", { name: "无用" })).toBeTruthy();
   });
 
-  it("previous 变体:眉题「上一版回答」,无「最新」标,操作行仅复制回答", () => {
+  it("previous 变体:眉题「上一版回答」,无「最新」标,操作行 = 复制+有用/无用,无重新生成", () => {
     render(
       <AnswerSheet variant="previous" answer="旧答案" citations={[CITATION]} />,
     );
     expect(screen.getByText("上一版回答")).toBeTruthy();
     expect(screen.queryByText("最新")).toBeNull();
     expect(screen.queryByRole("button", { name: "重新生成" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "有用" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "无用" })).toBeNull();
+    // 3.4.6:上一版也展示反馈入口,状态按本版本 qa_id 独立存取
+    expect(screen.getByRole("button", { name: "有用" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "无用" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "复制回答" })).toBeTruthy();
   });
 

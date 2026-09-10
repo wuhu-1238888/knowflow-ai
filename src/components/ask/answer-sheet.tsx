@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CitationChip } from "@/components/ask/citation-chip";
 import { ConflictPanel } from "@/components/ask/conflict-panel";
@@ -15,6 +15,7 @@ import {
 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
+  getFeedback,
   sendFeedback,
   type Citation,
   type ConflictItem,
@@ -27,13 +28,26 @@ import {
    (brand-600 描边 + 滚动进入视口);点 chip 或「查看原文」滑出来源抽屉。
    2026-09-09 人拍板:元信息行不暴露检索策略与工程调试值(模式徽标/最高分/耗时),
    仅保留用户价值信息「已基于企业知识库检索 · 依据 n 条」;三模式对比见评测页。
-   反馈 FR-12:有用/无用乐观更新,失败静默回退(暂无 Toast 组件,记遗留)。
    版本管理(3.4.4):variant latest = 主卡(「AI 回答 · 最新」+ 版本标注 +
-   完整操作行);previous = 历史版本(「上一版回答」,仅复制操作,边框由外层
-   折叠容器提供);generating = 卡内加载态(重新生成中,真实单请求单文案,
-   不伪造多阶段);sameNotice = 新旧内容一致提示(不复制旧卡片伪装新结果)。
+   完整操作行);previous = 历史版本(「上一版回答」,复制+反馈、无重新生成,
+   边框由外层折叠容器提供);generating = 卡内加载态(重新生成中,真实单请求
+   单文案,不伪造多阶段,无操作行 → 失效版本不可反馈);sameNotice = 新旧内容
+   一致提示(不复制旧卡片伪装新结果)。
    冲突 Trust 层(3.4.5):conflicts 非空时在正文之后、依据与来源之前渲染
-   ConflictPanel(默认轻量提示,可展开来源);冲突随版本传入、不串版本。 */
+   ConflictPanel(默认轻量提示,可展开来源);冲突随版本传入、不串版本。
+   操作反馈(3.4.6):有用/无用 = 互斥选中态(bg-brand-50 + 深紫文字),重复点击
+   同一项不重复提交;pending 禁用防重复点击;失败恢复原状态 + 轻量提示
+   「反馈提交失败,请重试」(3s 自动消失,技术细节只进 console)。复制回答 =
+   基于真实 Clipboard API 结果反馈:「✓ 已复制」/「复制失败,请重试」1.8s 后
+   恢复;复制内容 = AI 回答原文(不改既有复制数据契约)。反馈按 qa_id 绑定
+   Answer Version,挂载时 GET 恢复持久化状态(刷新不丢,读取失败静默;
+   恢复期间不锁定按钮,用户已提交则以用户提交为准)。 */
+
+/** 复制/失败反馈展示时长(1.5–2s 口径)与反馈失败提示时长。 */
+const COPY_FEEDBACK_MS = 1800;
+const FEEDBACK_ERROR_MS = 3000;
+
+type CopyState = "idle" | "copied" | "failed";
 
 export function formatAnswer(answer: string): string {
   return answer
@@ -73,7 +87,7 @@ export interface AnswerSheetProps {
   citations: Citation[];
   qaId?: string;
   onRegenerate?: () => void;
-  /* 版本管理(3.4.4):latest 主卡 / previous 历史版本(弱化,仅复制操作)。 */
+  /* 版本管理(3.4.4):latest 主卡 / previous 历史版本(弱化:复制+反馈,无重新生成)。 */
   variant?: "latest" | "previous";
   /** 眉题右侧轻量版本信息(如「v2 · 刚刚生成」),仅 latest 使用。 */
   versionMeta?: string;
@@ -104,7 +118,14 @@ export function AnswerSheet({
   const [feedback, setFeedback] = useState<{
     rating: FeedbackRating | null;
     pending: boolean;
-  }>({ rating: null, pending: false });
+    error: boolean;
+  }>({ rating: null, pending: false, error: false });
+  const [copyState, setCopyState] = useState<CopyState>("idle");
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const errorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* 用户在恢复读取完成前已提交反馈 → 忽略读取结果(用户最新意图优先,
+     避免过期状态覆盖新提交);读取期间不锁定按钮,无禁用闪烁。 */
+  const interactedRef = useRef(false);
 
   const formatted = useMemo(() => formatAnswer(answer), [answer]);
   const segments = useMemo(() => parseAnswerSegments(formatted), [formatted]);
@@ -113,18 +134,88 @@ export function AnswerSheet({
     [citations],
   );
 
-  async function submitFeedback(rating: FeedbackRating) {
-    if (!qaId || feedback.pending) {
+  /* 挂载时恢复该 Answer Version 的持久化反馈(3.4.6:刷新/展开上一版不丢状态);
+     读取失败静默(保持未选中,不阻塞主流程);生成中不读取(无操作行)。 */
+  useEffect(() => {
+    if (!qaId || generating) {
       return;
     }
+    let cancelled = false;
+    void getFeedback(qaId)
+      .then((rating) => {
+        if (!cancelled && !interactedRef.current) {
+          setFeedback((current) =>
+            current.rating === rating ? current : { ...current, rating },
+          );
+        }
+      })
+      .catch(() => {
+        /* 读取失败静默:按钮以未选中呈现 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [qaId, generating]);
+
+  /* 卸载时清理复制/错误提示的定时器(避免卸载后 setState)。 */
+  useEffect(() => {
+    return () => {
+      if (copyTimer.current) {
+        clearTimeout(copyTimer.current);
+      }
+      if (errorTimer.current) {
+        clearTimeout(errorTimer.current);
+      }
+    };
+  }, []);
+
+  async function submitFeedback(rating: FeedbackRating) {
+    // 无 qaId 不发请求;pending(提交中)防重复;同一项已选中 → 保持状态、不重复提交(MVP 不支持取消)
+    if (!qaId || feedback.pending || feedback.rating === rating) {
+      return;
+    }
+    interactedRef.current = true;
     const previous = feedback.rating;
-    setFeedback({ rating, pending: true });
+    setFeedback({ rating: previous, pending: true, error: false });
     try {
       await sendFeedback(qaId, rating);
-      setFeedback({ rating, pending: false });
-    } catch {
-      setFeedback({ rating: previous, pending: false }); // 失败静默回退
+      setFeedback({ rating, pending: false, error: false });
+    } catch (error) {
+      // 恢复原状态 + 轻量提示;技术细节只进 console,不暴露给用户
+      console.warn("反馈提交失败:", error);
+      setFeedback({ rating: previous, pending: false, error: true });
+      if (errorTimer.current) {
+        clearTimeout(errorTimer.current);
+      }
+      errorTimer.current = setTimeout(() => {
+        setFeedback((current) => ({ ...current, error: false }));
+      }, FEEDBACK_ERROR_MS);
     }
+  }
+
+  async function copyAnswer() {
+    // 复制内容 = AI 回答原文(不改既有复制数据契约)
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setCopyState("failed");
+      scheduleCopyReset();
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(answer);
+      setCopyState("copied");
+    } catch (error) {
+      // 技术错误(NotAllowedError 等)只进 console,给用户可读失败反馈
+      console.warn("复制回答失败:", error);
+      setCopyState("failed");
+    }
+    scheduleCopyReset();
+  }
+
+  function scheduleCopyReset() {
+    if (copyTimer.current) {
+      clearTimeout(copyTimer.current);
+    }
+    copyTimer.current = setTimeout(() => setCopyState("idle"), COPY_FEEDBACK_MS);
   }
 
   const isLatest = variant === "latest";
@@ -241,58 +332,67 @@ export function AnswerSheet({
           ) : null}
           <div className="flex flex-wrap items-center gap-1 border-t border-hairline px-4 py-2.5">
             {isLatest ? (
-              <>
-                <Button variant="secondary" size="md" onClick={onRegenerate}>
-                  <IconRefresh className="size-4" />
-                  重新生成
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={() => {
-                    void navigator.clipboard?.writeText(answer);
-                  }}
-                >
-                  <IconCopy className="size-4" />
-                  复制回答
-                </Button>
-                <span className="ml-2 flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    aria-pressed={feedback.rating === "useful"}
-                    disabled={feedback.pending}
-                    onClick={() => void submitFeedback("useful")}
-                    className={feedback.rating === "useful" ? "text-brand-800" : ""}
-                  >
-                    <IconThumbUp className="size-4" />
-                    有用
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    aria-pressed={feedback.rating === "useless"}
-                    disabled={feedback.pending}
-                    onClick={() => void submitFeedback("useless")}
-                    className={feedback.rating === "useless" ? "text-brand-800" : ""}
-                  >
-                    <IconThumbDown className="size-4" />
-                    无用
-                  </Button>
-                </span>
-              </>
-            ) : (
+              <Button variant="secondary" size="md" onClick={onRegenerate}>
+                <IconRefresh className="size-4" />
+                重新生成
+              </Button>
+            ) : null}
+            {/* 复制回答(3.4.6):仅真实 Clipboard 成功后反馈「✓ 已复制」,失败可读提示,
+                1.8s 自动恢复;复制内容 = 本版本回答原文(与 latest/previous 无关) */}
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => void copyAnswer()}
+              className={
+                copyState === "copied"
+                  ? "text-success-text"
+                  : copyState === "failed"
+                    ? "text-danger-text"
+                    : ""
+              }
+            >
+              {copyState === "idle" ? <IconCopy className="size-4" /> : null}
+              {copyState === "idle"
+                ? "复制回答"
+                : copyState === "copied"
+                  ? "✓ 已复制"
+                  : "复制失败,请重试"}
+            </Button>
+            {/* 有用/无用(3.4.6):互斥选中(brand-50 底 + 深紫字),重复点击同一项
+                不重复提交;pending 禁用防重复点击;失败恢复原状态 + 轻量提示 */}
+            <span className="ml-2 flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="md"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(answer);
-                }}
+                aria-pressed={feedback.rating === "useful"}
+                disabled={feedback.pending}
+                onClick={() => void submitFeedback("useful")}
+                className={
+                  feedback.rating === "useful" ? "bg-brand-50 text-brand-800" : ""
+                }
               >
-                <IconCopy className="size-4" />
-                复制回答
+                <IconThumbUp className="size-4" />
+                有用
               </Button>
-            )}
+              <Button
+                variant="ghost"
+                size="md"
+                aria-pressed={feedback.rating === "useless"}
+                disabled={feedback.pending}
+                onClick={() => void submitFeedback("useless")}
+                className={
+                  feedback.rating === "useless" ? "bg-brand-50 text-brand-800" : ""
+                }
+              >
+                <IconThumbDown className="size-4" />
+                无用
+              </Button>
+              {feedback.error ? (
+                <span className="ml-1 text-caption text-danger-text" aria-live="polite">
+                  反馈提交失败,请重试
+                </span>
+              ) : null}
+            </span>
           </div>
         </>
       )}

@@ -71,3 +71,34 @@ def test_feedback_422_invalid_rating(tmp_path):
         "/api/qa/qa-test-2/feedback", json={"rating": "meh"}
     )
     assert resp.status_code == 422
+
+
+def test_feedback_get_roundtrip(tmp_path):
+    """GET 读取(3.4.6 状态恢复):未提交 → null;提交后读最新值(与 upsert 一致)。"""
+    client, repo = make_client(tmp_path)
+    repo.add_qa_log(
+        {
+            "id": "qa-test-3",
+            "query": "问题",
+            "answer": "答案",
+            "citations_json": "[]",
+            "conflicts_json": None,
+            "no_answer": 0,
+            "mode": "hybrid_rerank",
+            "created_at": now_iso(),
+        }
+    )
+    resp = client.get("/api/qa/qa-test-3/feedback")
+    assert resp.status_code == 200
+    assert resp.json() == {"qa_id": "qa-test-3", "rating": None}
+    client.post("/api/qa/qa-test-3/feedback", json={"rating": "useful"})
+    resp = client.get("/api/qa/qa-test-3/feedback")
+    assert resp.status_code == 200
+    assert resp.json() == {"qa_id": "qa-test-3", "rating": "useful"}
+
+
+def test_feedback_get_404_unknown_qa(tmp_path):
+    client, _ = make_client(tmp_path)
+    resp = client.get("/api/qa/qa-ghost/feedback")
+    assert resp.status_code == 404
+    assert "QA 记录不存在" in resp.json()["detail"]

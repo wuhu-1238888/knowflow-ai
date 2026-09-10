@@ -6,7 +6,9 @@ import AskPage from "@/app/page";
 /* L3 问答页状态机测试:idle / loading / 回答 / 拒答 / 冲突 / 失败,
    直接 stub 全局 fetch(同 rag.test.ts 方式),断言请求体中的 query 与 mode。
    2026-09-09 人拍板:页面不暴露检索策略切换——断言无 radiogroup 且恒以默认
-   hybrid_rerank 提交;元信息行不出现工程调试值(最高分/耗时)。 */
+   hybrid_rerank 提交;元信息行不出现工程调试值(最高分/耗时)。
+   3.4.6 起 AnswerSheet 挂载会 GET /api/qa/:id/feedback 恢复反馈状态,
+   由 stubFetchWithFeedback 统一回 {rating:null},业务断言只数 ask/提交。 */
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -70,8 +72,28 @@ function stubFetch(impl: (url: string, init: RequestInit) => Promise<Response>) 
   return mock;
 }
 
-function requestBody(mock: ReturnType<typeof stubFetch>, callIndex = 0) {
-  const [url, init] = mock.mock.calls[callIndex] as [string, RequestInit];
+/** 3.4.6:AnswerSheet 挂载会 GET /api/qa/:id/feedback 恢复持久化反馈。
+   该请求一律回 {rating:null}(未评价),链式 mock 只计业务请求(ask/反馈提交)。 */
+function stubFetchWithFeedback(
+  impl: (url: string, init: RequestInit) => Promise<Response>,
+) {
+  const mock = vi.fn(async (url: string, init: RequestInit) => {
+    if (String(url).includes("/feedback") && (init.method ?? "GET") === "GET") {
+      return jsonResponse({ rating: null });
+    }
+    return impl(url, init);
+  });
+  vi.stubGlobal("fetch", mock);
+  return mock;
+}
+
+/** 仅 /api/ask 调用(反馈 GET/POST 不计入业务请求断言)。 */
+function askCalls(mock: ReturnType<typeof stubFetchWithFeedback>) {
+  return mock.mock.calls.filter(([url]) => String(url) === "/api/ask");
+}
+
+function requestBody(calls: [string, RequestInit][], callIndex = 0) {
+  const [, init] = calls[callIndex];
   return JSON.parse(Buffer.from(init.body as ArrayBuffer).toString("utf-8"));
 }
 
@@ -112,7 +134,7 @@ describe("AskPage idle 态", () => {
 
 describe("AskPage 回答流", () => {
   it("点击示例问题 → 请求 /api/ask(默认 hybrid_rerank)→ 渲染回答、元信息与依据", async () => {
-    const fetchMock = stubFetch(async () => jsonResponse(ANSWER_RESPONSE));
+    const fetchMock = stubFetchWithFeedback(async () => jsonResponse(ANSWER_RESPONSE));
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
@@ -121,12 +143,13 @@ describe("AskPage 回答流", () => {
     const input = screen.getByLabelText("提问内容") as HTMLTextAreaElement;
     expect(input.value).toBe("年假有几天?");
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // ask + 挂载反馈恢复 GET(3.4.6;GET 在挂载 effect 中发起,等待其落位)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     // 客户端走同源 BFF(见 src/lib/rag.ts),后端地址只存在于服务端 route 内部
     expect(url).toBe("/api/ask");
     expect(init.method).toBe("POST");
-    expect(requestBody(fetchMock)).toEqual({ query: "年假有几天?", mode: "hybrid_rerank" });
+    expect(requestBody(askCalls(fetchMock))).toEqual({ query: "年假有几天?", mode: "hybrid_rerank" });
 
     // AnswerSheet:元信息行只有用户价值信息,无工程调试值(最高分/耗时)
     expect(screen.getByText("已基于企业知识库检索")).toBeTruthy();
@@ -143,7 +166,7 @@ describe("AskPage 回答流", () => {
   });
 
   it("Enter 提交,Shift+Enter 不提交", async () => {
-    const fetchMock = stubFetch(async () => jsonResponse(ANSWER_RESPONSE));
+    const fetchMock = stubFetchWithFeedback(async () => jsonResponse(ANSWER_RESPONSE));
     render(<AskPage />);
 
     const input = screen.getByLabelText("提问内容") as HTMLTextAreaElement;
@@ -153,19 +176,17 @@ describe("AskPage 回答流", () => {
 
     fireEvent.keyDown(input, { key: "Enter" });
     await screen.findByText(/入职第一年享有 8 天 年假/);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(askCalls(fetchMock)).toHaveLength(1);
   });
 
   it("loading 态显示「AI 生成中」胶囊,完成后切换为回答", async () => {
     let resolveFetch!: (response: Response) => void;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        () =>
-          new Promise<Response>((resolve) => {
-            resolveFetch = resolve;
-          }),
-      ),
+    // 仅 /api/ask 挂起(控制加载态);挂载反馈恢复 GET 由 helper 立即返回
+    stubFetchWithFeedback(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
     );
     render(<AskPage />);
 
@@ -186,7 +207,7 @@ describe("AskPage 回答流", () => {
 
 describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
   it("首次回答:最新主卡带「最新」标与版本标注,不出现「上一版回答」", async () => {
-    stubFetch(async () => jsonResponse(ANSWER_RESPONSE));
+    stubFetchWithFeedback(async () => jsonResponse(ANSWER_RESPONSE));
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
@@ -198,7 +219,7 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
 
   it("重新生成:卡内加载态(无首次提问胶囊);成功后新回答最新 v2,旧回答折叠为上一版", async () => {
     let resolveSecond!: (response: Response) => void;
-    const fetchMock = vi
+    const impl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
       .mockImplementationOnce(
@@ -207,7 +228,7 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
             resolveSecond = resolve;
           }),
       );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = stubFetchWithFeedback(impl);
     render(<AskPage />);
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
     await screen.findByText(/入职第一年享有 8 天 年假/);
@@ -226,7 +247,7 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
       }),
     );
     await screen.findByText(/重新生成的回答/);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(askCalls(fetchMock)).toHaveLength(2);
     // 新回答 = 唯一主卡(最新 v2);旧回答默认折叠,正文不可见,不与新回答平级
     expect(screen.getByText("v2 · 刚刚生成")).toBeTruthy();
     expect(screen.getByRole("button", { name: /上一版回答/ })).toBeTruthy();
@@ -235,14 +256,14 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
     fireEvent.click(screen.getByRole("button", { name: /上一版回答/ }));
     expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
     // 第二次请求仍带同一问题与默认策略
-    expect(requestBody(fetchMock, 1)).toEqual({
+    expect(requestBody(askCalls(fetchMock), 1)).toEqual({
       query: "年假有几天?",
       mode: "hybrid_rerank",
     });
   });
 
   it("连续重新生成:v3 最新,v2 降为上一版,v1 让位(版本序号连续)", async () => {
-    const fetchMock = vi
+    const impl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
       .mockResolvedValueOnce(
@@ -251,7 +272,7 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
       .mockResolvedValueOnce(
         jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-b", answer: "第三版回答[1]。" }),
       );
-    vi.stubGlobal("fetch", fetchMock);
+    stubFetchWithFeedback(impl);
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
@@ -270,11 +291,11 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
   });
 
   it("新旧内容一致:明确提示,不复制旧卡片(仅一张主卡,版本不变)", async () => {
-    const fetchMock = vi
+    const impl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
       .mockResolvedValueOnce(jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-new" }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = stubFetchWithFeedback(impl);
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
@@ -283,7 +304,7 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
     expect(
       await screen.findByText("已完成重新生成,本次回答与上一版一致。"),
     ).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(askCalls(fetchMock)).toHaveLength(2);
     expect(screen.getAllByText(/入职第一年享有 8 天 年假/)).toHaveLength(1);
     expect(screen.getAllByText("AI 回答")).toHaveLength(1);
     expect(screen.getByText("v1 · 刚刚生成")).toBeTruthy();
@@ -291,11 +312,11 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
   });
 
   it("重新生成失败:错误卡显示,最新回答内容与版本恢复", async () => {
-    const fetchMock = vi
+    const impl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
       .mockRejectedValueOnce(new TypeError("fetch failed"));
-    vi.stubGlobal("fetch", fetchMock);
+    stubFetchWithFeedback(impl);
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
@@ -310,11 +331,11 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
   });
 
   it("重新生成得到拒答:拒答卡为当前结果,原回答降级「上一版回答」", async () => {
-    const fetchMock = vi
+    const impl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
       .mockResolvedValueOnce(jsonResponse({ ...REFUSE_RESPONSE, qa_id: "qa-refuse-2" }));
-    vi.stubGlobal("fetch", fetchMock);
+    stubFetchWithFeedback(impl);
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
@@ -326,11 +347,11 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
   });
 
   it("冲突随版本存储:新版本冲突更新,旧版本冲突随上一版展开呈现(不串版本)", async () => {
-    const fetchMock = vi
+    const impl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(CONFLICT_RESPONSE))
       .mockResolvedValueOnce(jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-plain" }));
-    vi.stubGlobal("fetch", fetchMock);
+    stubFetchWithFeedback(impl);
     render(<AskPage />);
 
     fireEvent.click(
@@ -350,20 +371,28 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
     expect(screen.getByText(/上限 150 元/)).toBeTruthy();
   });
 
-  it("有用:点选后 POST /api/qa/:qa_id/feedback(页面层 FR-12)", async () => {
-    const fetchMock = vi
+  it("有用:点选后 POST /api/qa/:qa_id/feedback 并进入选中态(页面层 FR-12)", async () => {
+    const impl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
       .mockResolvedValueOnce(jsonResponse({ qa_id: "qa-test-1", rating: "useful" }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = stubFetchWithFeedback(impl);
     render(<AskPage />);
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
     await screen.findByText(/入职第一年享有 8 天 年假/);
     fireEvent.click(screen.getByRole("button", { name: "有用" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
-    expect(url).toBe("/api/qa/qa-test-1/feedback");
-    expect(JSON.parse(String(init.body))).toEqual({ rating: "useful" });
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "有用" }) as HTMLButtonElement)
+          .getAttribute("aria-pressed"),
+      ).toBe("true"),
+    );
+    const post = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url).includes("/feedback") && (init?.method ?? "GET") === "POST",
+    )!;
+    expect(post[0]).toBe("/api/qa/qa-test-1/feedback");
+    expect(JSON.parse(String(post[1].body))).toEqual({ rating: "useful" });
   });
 });
 
@@ -381,7 +410,7 @@ describe("AskPage 拒答 / 冲突 / 失败", () => {
   });
 
   it("conflicts 非空:回答卡内 Trust 提示默认收起,点击展开冲突来源(3.4.5)", async () => {
-    stubFetch(async () => jsonResponse(CONFLICT_RESPONSE));
+    stubFetchWithFeedback(async () => jsonResponse(CONFLICT_RESPONSE));
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "市内交通费每天报销上限是多少?" }));
@@ -398,11 +427,11 @@ describe("AskPage 拒答 / 冲突 / 失败", () => {
   });
 
   it("网络失败渲染错误卡;重试成功后恢复", async () => {
-    const fetchMock = vi
+    const impl = vi
       .fn()
       .mockRejectedValueOnce(new TypeError("fetch failed"))
       .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = stubFetchWithFeedback(impl);
     render(<AskPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
@@ -412,6 +441,6 @@ describe("AskPage 拒答 / 冲突 / 失败", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     expect(await screen.findByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(askCalls(fetchMock)).toHaveLength(2);
   });
 });

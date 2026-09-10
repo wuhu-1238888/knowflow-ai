@@ -160,6 +160,15 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         repo.set_feedback(qa_id, req.rating, now_iso())
         return {"qa_id": qa_id, "rating": req.rating}
 
+    @app.get("/api/qa/{qa_id}/feedback")
+    def read_feedback(qa_id: str) -> dict:
+        """FR-12 反馈读取(3.4.6):页面刷新后恢复该回答的已提交反馈;
+        未提交过 → rating null;QA 不存在 → 404。"""
+        repo = _repo()
+        if not repo.qa_exists(qa_id):
+            raise HTTPException(status_code=404, detail="QA 记录不存在")
+        return {"qa_id": qa_id, "rating": repo.get_feedback(qa_id)}
+
     # ── 文档管理(3.3.3:上传 / 列表 / 删除 / 重建索引,FR-01/FR-09)──
 
     def _set_status(doc_id: str, status: str) -> None:

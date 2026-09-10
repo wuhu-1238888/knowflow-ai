@@ -162,6 +162,28 @@ export async function sendFeedback(
   }
 }
 
+/** FR-12 反馈读取(3.4.6 状态恢复):挂载时恢复该回答的已提交反馈;
+    该 QA 从未被反馈(404 或 rating 缺失)→ null,视为未评价。 */
+export async function getFeedback(qaId: string): Promise<FeedbackRating | null> {
+  const response = await fetch(`/api/qa/${encodeURIComponent(qaId)}/feedback`);
+  if (response.status === 404) {
+    return null;
+  }
+  const body = (await response.json().catch(() => null)) as {
+    rating?: string | null;
+    error?: string;
+  } | null;
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      body?.error ?? "反馈状态加载失败,请稍后重试",
+    );
+  }
+  return body?.rating === "useful" || body?.rating === "useless"
+    ? body.rating
+    : null;
+}
+
 /* ── /api/documents 文档库(3.3.3:上传/列表/删除/重建索引,FR-01/FR-09)── */
 
 export interface DocumentInfo {

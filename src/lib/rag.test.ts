@@ -10,12 +10,13 @@ import { POST as postReindex } from "@/app/api/documents/[id]/reindex/route";
 import { GET as getEvalRunRoute } from "@/app/api/eval/runs/[id]/route";
 import { POST as postAsk } from "@/app/api/ask/route";
 import { POST as postIngest } from "@/app/api/ingest/route";
-import { POST as postFeedback } from "@/app/api/qa/[id]/feedback/route";
+import { GET as getFeedbackRoute, POST as postFeedback } from "@/app/api/qa/[id]/feedback/route";
 import {
   ApiError,
   askQuestion,
   deleteDocument,
   getEvalRun,
+  getFeedback,
   listDocuments,
   listEvalRuns,
   proxyToRag,
@@ -193,6 +194,21 @@ describe("其余代理路由(路径与 method 转发)", () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: "QA 记录不存在" });
   });
+
+  it("GET /api/qa/:id/feedback 转发带 id 且无请求体(3.4.6 状态恢复)", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ qa_id: "qa-1", rating: null }),
+    );
+    const response = await getFeedbackRoute(
+      new Request("http://localhost:3001/api/qa/qa-1/feedback"),
+      { params: Promise.resolve({ id: "qa-1" }) },
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${RAG_BASE_URL}/api/qa/qa-1/feedback`);
+    expect(init.method).toBe("GET");
+    expect(init.body).toBeUndefined();
+  });
 });
 
 describe("typed client askQuestion", () => {
@@ -243,6 +259,32 @@ describe("typed client sendFeedback(FR-12)", () => {
       name: "ApiError",
       status: 404,
       message: "QA 记录不存在",
+    });
+  });
+});
+
+describe("typed client getFeedback(3.4.6 状态恢复)", () => {
+  it("成功:解析 rating 为有用/无用", async () => {
+    stubFetch(async () => jsonResponse({ qa_id: "qa-1", rating: "useless" }));
+    await expect(getFeedback("qa-1")).resolves.toBe("useless");
+  });
+
+  it("无记录:rating null → null(未评价)", async () => {
+    stubFetch(async () => jsonResponse({ qa_id: "qa-1", rating: null }));
+    await expect(getFeedback("qa-1")).resolves.toBeNull();
+  });
+
+  it("QA 不存在:404 → null(视为未评价,不抛错)", async () => {
+    stubFetch(async () => jsonResponse({ error: "QA 记录不存在" }, 404));
+    await expect(getFeedback("qa-ghost")).resolves.toBeNull();
+  });
+
+  it("其他非 2xx(如 503)→ ApiError(可读信息)", async () => {
+    stubFetch(async () => jsonResponse({ error: "RAG 服务不可达,请稍后重试" }, 503));
+    await expect(getFeedback("qa-1")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 503,
+      message: "RAG 服务不可达,请稍后重试",
     });
   });
 });
