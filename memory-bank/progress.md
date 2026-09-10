@@ -238,6 +238,20 @@
 - **测试**:vitest 167/167(新增 12:互斥/防重/挂载恢复/失败恢复+自动消失/previous 按版本绑定/复制成功/被拒/不可用 + getFeedback client 4 + BFF GET 转发;page.test 引入 stubFetchWithFeedback 统一回 null、askCalls 只数业务请求);pytest 188/188(新增 GET 回读 2);typecheck 干净;dev server 重启后实机走通 ask → GET null → POST useful → GET useful → 404。零新依赖;未动检索策略/评测页/文档库/布局。
 - **L4 待人操作(浏览器,约 3 分钟)**:提问「年假有几天?」→ 点「有用」变紫底选中、再点「无用」切换 → 点「复制回答」变「✓ 已复制」约 1.8s 后恢复(粘贴验证内容=回答正文)→ 刷新页面确认选中态恢复 → 重新生成后:新版本无选中、展开上一版(若已点过)仍保留自己的选中 → 断网(DevTools Offline)点「有用」→「反馈提交失败,请重试」3s 消失。
 
+### 3.5.1 设计规则全站自检(2026-09-11,机器侧完成)
+
+- 依据 DesignRules「提交前自检清单」11 条逐条执行(grep + 静态核查),**修复合计 7 项**:
+  1. 字号 token 化 5 处:`text-[12px]`→`text-code-sm`(citation-chip/evidence-item,front matter 规格)、sidebar 文字标 `text-[16px]`→`text-heading-2`、topbar 文字标 ×2 `text-[14px]`→`text-heading-3`;
+  2. confirm-modal `max-w-[400px]`→`max-w-[420px]`(modal 规格 maxWidth 420);
+  3. Skeleton 动画:animate-pulse(2s)与 components.skeleton.animation(1.6s ease-in-out)不符 → theme.css 新增 `--animate-skeleton` + keyframes,5 处 Skeleton 迁移;
+  4. 生成中胶囊 `px-3 py-1.5 text-body-sm` → `px-2.5 py-[3px] text-caption`(generating-pill 规格 3px 10px caption);
+  5. 新建 QuestionChip 组件(components.question-chip 规格直映射:28px/5px 10px/body-sm/hover surface-2+strong 描边),替换问答页示例 chip 的 Button secondary 临时实现——兑现 3.3.2 偏差记录②;
+  6. DesignRules pill 白名单补唯一例外:评测页运行按钮内 16px loading 细环 spinner(DesignSystem 状态规范 loading 行本就允许,非胶囊容器);
+  7. tokens.test 新增 Skeleton 动画对拍断言 1 例。
+- 确认合规(零改动):色值全在 theme.css 映射层;渐变 4 处全白名单;每屏唯一 primary;拒答卡中性灰「依据 0 条」无调试值;冲突面板琥珀等宽双卡;numeric token 覆盖 7 文件;表格 overflow-x-auto;全局 :focus-visible + input 3px focus-ring;动效全 ≤200ms;prefers-reduced-motion 全局;emoji 扫描仅「✓ 已复制」(3.4.6 人拍板文案文字符);container 映射由 tokens.test 对拍;button.tsx `text-[14px]` = components.button-* typography {14,500,1.3} 直映射、badge `h-[22px]` = badge-base 规格,均非违规。
+- 验证:vitest 168/168(+1)、typecheck 干净、四页 SSR 200、grep 复查仅剩规格直映射。
+- **待人浏览器走查**:375/768/1024 三断点视觉复核 + prefers-reduced-motion 实景观感(清单 ⑦⑨ 视觉部分);走查记录已写入 DesignRules「走查记录」2026-09-11 条。
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->

@@ -16,7 +16,7 @@
 - **按钮层级**:每屏(可见区域)最多一个 primary;primary 仅用于 4 个动作——提问、上传、运行评测、确认删除(danger)。其余一律 secondary/ghost/icon。
 - **引用 chip**:只能渲染规则侧映射的编号;编号必须与依据带一一对应;缺失引用显示灰态不可点,禁止静默丢弃。
 - **渐变白名单**:`{colors.ai-gradient}` 仅允许出现在 3 个组件——品牌标记、AI 眉题 8px 圆点、「AI 生成中」胶囊。出现第 4 处即违规。
-- **胶囊(pill)白名单**:`{rounded.pill}` 仅属于「AI 生成中」状态胶囊;所有按钮、徽标、chip 一律方形(6px 圆角)。
+- **胶囊(pill)白名单**:`{rounded.pill}` 仅属于「AI 生成中」状态胶囊;所有按钮、徽标、chip 一律方形(6px 圆角)。唯一例外:按钮内 16px loading 细环 spinner(圆形边框指示器,非胶囊容器)——DesignSystem 状态规范 loading 行明确允许(2026-09-11 自检确认)。
 - **阴影档位**:默认 flat + 发丝线;悬停 `{shadows.hover}`;浮层(抽屉/模态/Toast)才能用 `{shadows.floating}`。禁止自造第四档。
 - **动效预算**:颜色/背景 150ms;抽屉 200ms;仅「AI 生成中」胶囊与 Skeleton 占位允许无限循环动画;任何内容块禁止入场动画。
 - **徽标语义**:文档状态(已索引 success/解析中 info/解析失败 danger/待索引 neutral)与检索模式(关键词/向量/混合)配色固定,禁止换用、禁止混色。
@@ -63,7 +63,7 @@
 - 禁止硬编码色值(检查:`grep -rn '#[0-9a-fA-F]\{3,8\}' src/`,透明 rgba 与 DesignSystem 内除外)
 - 禁止使用 DesignSystem.md front matter 之外的色值/字号/圆角/阴影/动效时长
 - 禁止渐变出现在品牌标记、AI 眉题点、生成中胶囊之外(检查:`grep -rn 'gradient' src/`)
-- 禁止胶囊(pill)形状用于「AI 生成中」之外的任何组件(检查:`grep -rn '999' src/` 或 `rounded-full`)
+- 禁止胶囊(pill)形状用于「AI 生成中」之外的任何组件(检查:`grep -rn '999' src/` 或 `rounded-full`;唯一例外 = 按钮内 16px loading 细环 spinner,见组件使用规则)
 - 禁止把回答渲染为聊天气泡、左右对话流或历史时间轴
 - 禁止为内容块添加入场动画(fade/slide/scale);瞬时动效总时长 > 200ms(生成中胶囊与 Skeleton 占位脉动除外)
 - 禁止阴影超过 `{shadows.floating}` 档、禁止连续多层阴影
@@ -99,3 +99,16 @@
   - 焦点环:Tab 走查导航项/按钮,2px 品牌紫描边 + 2px 偏移可见;
   - 动效:hover 仅 ≤150ms 颜色过渡,无入场动画、无白名单外渐变/阴影。
   - 走查人:王荟茹(2026-09-09)
+- **2026-09-11 3.5.1 全站自检(机器侧,11 条清单逐条执行) 通过**:
+  - ① 硬编码色值:src/ 仅 theme.css(DesignSystem 映射层,豁免)含 hex;组件零色值。字号:发现并修复 5 处任意值——citation-chip/evidence-item `text-[12px]`→`text-code-sm`(front matter citation-chip 规格)、sidebar 品牌文字标 `text-[16px]`→`text-heading-2`(16/600,负字距按品牌节保留)、topbar 文字标 ×2 `text-[14px]`→`text-heading-3`。button.md 的 `text-[14px] leading-[1.3]` = components.button-* typography {14,500,1.3} 的直映射,不算违规。badge `h-[22px]` = badge-base height 22 规格直映射。
+  - ② 渐变:4 处全在白名单(品牌标记 1 + AI 眉题 8px 点 2 + 生成中胶囊 1)+ theme.css 定义。
+  - ③ 每屏唯一 primary:问答页「提问」、文档库「上传文档」、评测页「运行评测」各 1 个;「确认删除」在模态内(danger,模态上下文唯一)。示例 chip 自 Button secondary 迁移至独立 QuestionChip 组件(兑现 3.3.2 偏差记录②:28px/5px 10px/body-sm 按 components.question-chip 规格)。
+  - ④ 引用 chip ↔ 依据条目:编号由规则侧重建、missing 灰态不可点;双向联动(悬停 chip ↔ 引用句 ↔ 依据条目)由 L3 组件测试覆盖(vitest 167/167 含该用例)。
+  - ⑤ 拒答卡:surface-2 中性灰 + 「依据 0 条」numeric,无分数/阈值/红色(注释与实测一致);冲突面板:warning 琥珀 + 双卡 md:grid-cols-2 等宽、无胜负标记。
+  - ⑥ 数字:numeric token 已用于回答依据数、证据 rerank 分数、评测矩阵、运行历史、文档分块数、拒答依据 0 条(grep 确认 7 个文件)。
+  - ⑦ 375px 溢出与表格滚动:文档表格与评测明细均 `overflow-x-auto`(容器 rounded-md 对齐 table-container 规格);375/768/1024 三断点视觉走查待人浏览器复核。
+  - ⑧ 焦点环/键盘:全局 `:focus-visible` 2px brand-600 + 2px 偏移(theme.css);输入框 focus = brand 描边 + 3px focus-ring(规格直映射);Esc 关抽屉/模态、Enter 提问、`/` 聚焦由 L3 测试覆盖。
+  - ⑨ 动效:全部 ≤200ms(颜色 150ms/抽屉 200ms);无内容入场动画;无限循环仅白名单两项——生成中胶囊 shimmer 1.6s + Skeleton 脉动(修复:animate-pulse 2s 与 components.skeleton.animation「1.6s ease-in-out」不符 → 新增 --animate-skeleton 映射,5 处 Skeleton 迁移);`prefers-reduced-motion` 全局压成瞬时。
+  - ⑩ 无 emoji 图标/装饰插画/越界 pill:emoji 扫描仅命中「✓ 已复制」(3.4.6 人拍板文案的文字符,非图标);pill 唯一例外 = 评测页运行按钮内 16px 细环 spinner(状态规范 loading 行允许,已补白名单说明);shadow 仅 floating 档(抽屉/模态)。
+  - ⑪ 容器:app-shell 映射与 containers 对拍测试覆盖(960/1152/1152/880/回落 960);src/ 无 max-w-[760px] 残留、无页面级另设 max-width;浮层宽度为组件规格直映射(drawer 360/modal 420——修复 confirm-modal 400px 偏差);表格列截断 320px 与空态说明 420px 属信息层级理由,4px 网格合规。
+  - 修复合计 7 项(4 文件字号 token 化、modal 宽度、skeleton 动画映射、胶囊规格对齐、QuestionChip 组件化)+ DesignRules 白名单说明 1 处 + tokens.test 新增 skeleton 对拍 1 例。**机器侧自检通过;375/768/1024 三断点与 prefers-reduced-motion 实景观感待人浏览器走查。**

@@ -161,9 +161,9 @@ export default function DocumentsPage() {
             </p>
           ) : (
             <div className="space-y-2" aria-label="加载中">
-              <div className="h-10 animate-pulse rounded-md bg-surface-2" />
-              <div className="h-10 animate-pulse rounded-md bg-surface-2" />
-              <div className="h-10 animate-pulse rounded-md bg-surface-2" />
+              <div className="h-10 animate-skeleton rounded-md bg-surface-2" />
+              <div className="h-10 animate-skeleton rounded-md bg-surface-2" />
+              <div className="h-10 animate-skeleton rounded-md bg-surface-2" />
             </div>
           )
         ) : docs.length === 0 && uploading === null ? (

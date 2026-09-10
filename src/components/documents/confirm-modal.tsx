@@ -51,7 +51,7 @@ export function ConfirmModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
-        className="relative w-full max-w-[400px] rounded-xl bg-surface p-6 shadow-floating"
+        className="relative w-full max-w-[420px] rounded-xl bg-surface p-6 shadow-floating"
       >
         <h2
           id="confirm-modal-title"

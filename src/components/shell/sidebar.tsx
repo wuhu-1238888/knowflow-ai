@@ -51,7 +51,7 @@ export function Sidebar({ pathname }: { pathname: string }) {
         <BrandMark />
         <Link
           href="/"
-          className="text-[16px] font-semibold tracking-[-0.01em] text-ink"
+          className="text-heading-2 font-semibold tracking-[-0.01em] text-ink"
         >
           KnowFlow
         </Link>

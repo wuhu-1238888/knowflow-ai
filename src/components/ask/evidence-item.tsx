@@ -54,7 +54,7 @@ export function EvidenceItem({
         {/* 编号 chip:纯展示(悬停联动由条目整体承担,点开原文走「查看原文」) */}
         <span
           aria-hidden="true"
-          className="mt-0.5 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-sm bg-brand-100 px-1 font-mono text-[12px] text-brand-800 lg:min-h-8 lg:min-w-8"
+          className="mt-0.5 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-sm bg-brand-100 px-1 text-code-sm text-brand-800 lg:min-h-8 lg:min-w-8"
         >
           [{citation.index}]
         </span>

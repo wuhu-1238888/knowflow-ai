@@ -7,6 +7,7 @@ import { AskTextarea } from "@/components/ask/ask-textarea";
 import { ErrorCallout } from "@/components/ask/error-callout";
 import { NoAnswerCallout } from "@/components/ask/no-answer-callout";
 import { PreviousAnswer, type AnswerVersion } from "@/components/ask/previous-answer";
+import { QuestionChip } from "@/components/ask/question-chip";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { versionAgeLabel } from "@/lib/format";
@@ -116,7 +117,7 @@ export default function AskPage() {
         <div className="flex flex-col items-start gap-2">
           {/* 「AI 生成中」胶囊:唯一 pill + 唯一 shimmer(白名单),仅首次提问使用;
               重新生成的加载态在最新回答卡内(不伪造多阶段) */}
-          <span className="inline-flex animate-shimmer items-center gap-1.5 rounded-full bg-ai-gradient px-3 py-1.5 text-body-sm text-ink-inverse">
+          <span className="inline-flex animate-shimmer items-center gap-1.5 rounded-full bg-ai-gradient px-2.5 py-[3px] text-caption text-ink-inverse">
             AI 生成中
           </span>
           <p className="text-body-sm text-ink-2">
@@ -134,17 +135,15 @@ export default function AskPage() {
           <p className="text-body-sm text-ink-2">试试这些问题:</p>
           <div className="flex flex-wrap gap-2">
             {EXAMPLE_QUESTIONS.map((example) => (
-              <Button
+              <QuestionChip
                 key={example.query}
-                variant="secondary"
-                title={example.hint}
+                label={example.query}
+                hint={example.hint}
                 onClick={() => {
                   setQuery(example.query);
                   void submit(example.query);
                 }}
-              >
-                {example.query}
-              </Button>
+              />
             ))}
           </div>
         </div>

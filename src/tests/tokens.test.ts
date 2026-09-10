@@ -136,6 +136,11 @@ describe("L1 token 对拍:全局基础样式", () => {
   it("prefers-reduced-motion 存在(DesignRules 动效预算)", () => {
     expect(THEME).toContain("prefers-reduced-motion");
   });
+
+  it("Skeleton 动画映射 components.skeleton.animation(1.6s ease-in-out,白名单无限循环之一)", () => {
+    expect(THEME).toContain("--animate-skeleton: skeleton-pulse 1.6s ease-in-out infinite");
+    expect(THEME).toContain("@keyframes skeleton-pulse");
+  });
 });
 
 describe("L1 token 对拍:containers(页面容器宽度)", () => {

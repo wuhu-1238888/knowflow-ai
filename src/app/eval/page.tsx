@@ -69,7 +69,7 @@ function SkeletonRows({ rows = 3 }: { rows?: number }) {
       {Array.from({ length: rows }, (_, i) => (
         <div
           key={i}
-          className="mb-2 h-10 animate-pulse rounded-md bg-surface-2 last:mb-0"
+          className="mb-2 h-10 animate-skeleton rounded-md bg-surface-2 last:mb-0"
         />
       ))}
     </div>
@@ -261,7 +261,7 @@ function RunRow({
       {expanded ? (
         <div className="border-t border-hairline px-4 py-3">
           {loading ? (
-            <div className="h-10 animate-pulse rounded-md bg-surface-2" />
+            <div className="h-10 animate-skeleton rounded-md bg-surface-2" />
           ) : null}
           {error ? <p className="text-body-sm text-danger-text">{error}</p> : null}
           {detail?.per_case ? <PerCaseTable perCase={detail.per_case} /> : null}

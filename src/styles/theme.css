@@ -109,8 +109,11 @@
   --default-transition-duration: 150ms;
   --default-transition-timing-function: ease-out;
 
-  /* 「AI 生成中」胶囊呼吸(DesignSystem motion.shimmer;白名单内唯一无限循环动画) */
+  /* 「AI 生成中」胶囊呼吸(DesignSystem motion.shimmer);Skeleton 灰阶脉动
+     (components.skeleton.animation: opacity 1.6s ease-in-out infinite);
+     二者为白名单内仅有的无限循环动画 */
   --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-skeleton: skeleton-pulse 1.6s ease-in-out infinite;
 
   @keyframes shimmer {
     0%,
@@ -119,6 +122,16 @@
     }
     50% {
       opacity: 0.55;
+    }
+  }
+
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
     }
   }
 }

@@ -22,7 +22,7 @@ export function CitationChip({
   onHover,
   className = "",
 }: CitationChipProps) {
-  const base = "inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm px-1 font-mono text-[12px] transition-colors duration-150 lg:min-h-8 lg:min-w-8";
+  const base = "inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm px-1 text-code-sm transition-colors duration-150 lg:min-h-8 lg:min-w-8";
   if (missing) {
     return (
       <span
