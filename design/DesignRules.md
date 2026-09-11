@@ -112,3 +112,4 @@
   - ⑩ 无 emoji 图标/装饰插画/越界 pill:emoji 扫描仅命中「✓ 已复制」(3.4.6 人拍板文案的文字符,非图标);pill 唯一例外 = 评测页运行按钮内 16px 细环 spinner(状态规范 loading 行允许,已补白名单说明);shadow 仅 floating 档(抽屉/模态)。
   - ⑪ 容器:app-shell 映射与 containers 对拍测试覆盖(960/1152/1152/880/回落 960);src/ 无 max-w-[760px] 残留、无页面级另设 max-width;浮层宽度为组件规格直映射(drawer 360/modal 420——修复 confirm-modal 400px 偏差);表格列截断 320px 与空态说明 420px 属信息层级理由,4px 网格合规。
   - 修复合计 7 项(4 文件字号 token 化、modal 宽度、skeleton 动画映射、胶囊规格对齐、QuestionChip 组件化)+ DesignRules 白名单说明 1 处 + tokens.test 新增 skeleton 对拍 1 例。**机器侧自检通过;375/768/1024 三断点与 prefers-reduced-motion 实景观感待人浏览器走查。**
+  - 走查人:王荟茹(2026-09-11,M5 拍板:四条人工验收全部达成,L4 走查清单 10 项随拍板通过,详见 docs/m5-acceptance-checklist.md)
