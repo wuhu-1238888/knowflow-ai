@@ -20,13 +20,16 @@ describe("Sidebar(224px 白底 + 右侧发丝线,四页导航)", () => {
     expect(screen.getByText("v0.1.0")).toBeTruthy();
   });
 
-  it("当前路径项呈激活态(brand-100 底 + brand-800 文字)", () => {
+  it("当前路径项呈激活态(非常浅蓝底 + 深色文字 + 蓝 icon,二轮收蓝)", () => {
     render(<Sidebar pathname="/documents" />);
     const active = screen.getByRole("link", { name: "文档库" });
-    expect(active.className).toContain("bg-brand-100");
-    expect(active.className).toContain("text-brand-800");
+    expect(active.className).toContain("bg-brand-50");
+    expect(active.className).toContain("text-ink");
+    expect(active.querySelector("svg")?.getAttribute("class")).toContain(
+      "text-brand-600",
+    );
     const inactive = screen.getByRole("link", { name: "知识问答" });
-    expect(inactive.className).not.toContain("bg-brand-100");
+    expect(inactive.className).not.toContain("bg-brand-50");
   });
 
   it("标注演示数据为虚构(synthetic 声明)", () => {

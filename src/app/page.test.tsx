@@ -157,11 +157,12 @@ describe("AskPage 回答流", () => {
     expect(screen.queryByText(/最高分/)).toBeNull();
     expect(screen.queryByText(/耗时/)).toBeNull();
     expect(screen.getByText("AI 回答")).toBeTruthy();
-    // 正文 [1] 标记渲染为可点引用 chip,依据条目展示文档标题/片段/来源/分数
+    // 正文 [1] 标记渲染为可点引用 chip,依据条目展示文档标题/片段/来源(无相关度)
     expect(screen.getByRole("button", { name: "查看来源 [1]" })).toBeTruthy();
     expect(screen.getByText("员工手册")).toBeTruthy();
     expect(screen.getByText(/入职第一年年假为 8 天/)).toBeTruthy();
-    expect(screen.getByText("相关度 0.66")).toBeTruthy();
+    // 二轮收蓝:相关度 = 工程调试信息,不进普通用户视图(保留在 API 与评测页)
+    expect(screen.queryByText(/相关度/)).toBeNull();
     expect(screen.getByRole("button", { name: "查看原文" })).toBeTruthy();
   });
 

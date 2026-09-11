@@ -47,8 +47,8 @@ colors:
   mode-keyword-bg: "#EFF1F4"
   mode-vector: "#0E7490"        # 向量检索:青
   mode-vector-bg: "#E7F4F6"
-  mode-hybrid: "#1E40AF"        # 混合检索:蓝(brand 深档)
-  mode-hybrid-bg: "#DBEAFE"
+  mode-hybrid: "#52525B"        # 混合检索:中性灰(2026-09-11 二轮收蓝:检索技术元数据,不占品牌色)
+  mode-hybrid-bg: "#F0F1F4"
 typography:
   font-sans: "Inter, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif"
   font-mono: "'Geist Mono', 'JetBrains Mono', Consolas, 'SF Mono', monospace"
@@ -136,7 +136,7 @@ components:
   sidebar:             { backgroundColor: "{colors.surface}", borderRight: "1px solid {colors.hairline}", width: 224 }
   sidebar-item:        { textColor: "{colors.ink-2}", typography: "{typography.body-md}", rounded: "{rounded.sm}", height: 36, padding: "0 10px" }
   sidebar-item-hover:  { backgroundColor: "{colors.surface-2}" }
-  sidebar-item-active: { backgroundColor: "{colors.brand-100}", textColor: "{colors.brand-800}", typography: { size: 15, weight: 500, lineHeight: 1.6 } }
+  sidebar-item-active: { backgroundColor: "{colors.brand-50}", textColor: "{colors.ink}", iconColor: "{colors.brand-600}", typography: { size: 15, weight: 500, lineHeight: 1.6 } }
   # ── 浮层 ──
   drawer:              { backgroundColor: "{colors.surface}", boxShadow: "{shadows.floating}", width: 360, rounded: "{rounded.xl}" }
   modal:               { backgroundColor: "{colors.surface}", boxShadow: "{shadows.floating}", rounded: "{rounded.xl}", maxWidth: 420 }
@@ -189,7 +189,7 @@ components:
 
 - 铁律:**同屏最多 2 种彩色强调**(brand + 1 个语义色);语义色只用于「状态」,不用于装饰。
 - 拒答**不使用** danger 色(拒答是正确行为,不是错误);冲突**不使用** danger 色(分歧是待用户裁决,不是故障);No-answer/拒答 = 中性,不是 Error。
-- 检索模式/来源徽标(mode-*)是固定语义色,不受「普通 Badge 中性化」影响:关键词 = 石板、向量 = 青、混合 = 品牌深档蓝(表示当前默认策略)。
+- 检索模式/来源徽标(mode-*)是固定语义色:**混合 = 中性灰**(2026-09-11 二轮收蓝拍板:检索策略是技术元数据,不占品牌色);关键词 = 石板、向量 = 青(固定语义色保留);评测页不使用 mode 徽标。
 
 ### Token 一览
 
@@ -203,7 +203,7 @@ components:
 | `{colors.warning*}` | **仅**文档口径冲突(分歧) | 冲突面板、分歧徽标 |
 | `{colors.danger*}` | 解析失败、删除确认、真实错误 | 状态徽标、危险按钮、确认弹窗 |
 | `{colors.info*}` | 解析中/处理中 | 状态徽标 |
-| `{colors.mode-*}` | 检索模式与来源徽标(固定语义,禁止换用) | 模式切换说明、依据条目、评测矩阵 |
+| `{colors.mode-*}` | 检索模式与来源徽标(固定语义,禁止换用;混合 = 中性灰) | 依据条目、来源抽屉 |
 
 ## 排版规则
 
@@ -275,12 +275,12 @@ components:
 - 语义:编号由规则侧映射(ai-design FR-05),**视觉顺序必须与依据带编号一致**;任何引用错误(指向缺失)显示为灰态不可点 + 提示,不静默。
 
 **3. 依据条目(EvidenceItem)+ 双向证据联动**——KnowFlow 独有的核对交互。
-- 结构:[1] 编号 chip · 文档标题(heading-3)· 章节/更新时间(caption ink-3)· 引用片段(evidence-quote:surface-2 底 + 2px brand-100 左边线,13px,最多 4 行可展开)· 元信息行(来源徽标:向量/关键词/混合 · rerank 分数 mono ·「查看原文」链接)。
+- 结构:[1] 编号 chip(中性 surface-2 底 + ink-2 字,与正文引用 chip 形成层级)· 文档标题(heading-3)· 章节/更新时间(caption ink-3)· 引用片段(evidence-quote:surface-2 底 + 2px brand-100 左边线,13px,最多 4 行可展开)· 元信息行(来源徽标:向量/关键词/混合,混合 = 中性灰 ·「查看原文」链接)。
 - **双向联动**:① 悬停引用 chip → 回答正文中对应引用句高亮(brand-50 底)+ 对应依据条目高亮(brand-600 描边)并滚动进入视口;② 悬停依据条目 → 回答正文中对应引用句高亮。这是"每条断言都能对到原文"的交互表达,支撑 5 分钟演示闭环的「点开来源核对原文」。
-- 分数展示:vector/keyword 来源显示检索分,hybrid_rerank 模式显示 rerank 分,一律 mono 保留 2 位小数。
+- 分数展示(2026-09-11 二轮收蓝拍板):相关度/检索分数**不进普通用户视图**——保留在 API 响应与评测页;依据条目与来源抽屉不再展示。
 
 **4. 来源抽屉(SourceDrawer)**——点「查看原文」或引用 chip 滑出。
-- 内容:文档标题(20px/600)+ 元信息(格式徽标 · 状态徽标 · 上传时间)+ 完整 chunk 原文(body-lg 排版,段落保留)+ 该 chunk 的检索分数与来源模式 + 「在文档库中查看」链接。
+- 内容:文档标题(20px/600)+ 元信息(格式徽标 · 状态徽标 · 上传时间)+ 完整 chunk 原文(body-lg 排版,段落保留)+ 来源模式徽标(中性弱元数据)+ 「在文档库中查看」链接。分数不进普通用户视图(2026-09-11 二轮收蓝)。
 - 抽屉内原文可滚动,无分页;来源定位 = 滚动到对应 chunk 并短暂高亮(brand-50 底,motion.fast)。
 
 **5. 拒答卡(NoAnswerCallout)**——平静的中性灰,不是错误。

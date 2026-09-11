@@ -11,7 +11,8 @@ import { formatUploadDate, sourceMeta, statusMeta } from "./source-meta";
 /* 来源抽屉(SourceDrawer,DesignSystem AI 特有组件 4):点「查看原文」或引用 chip 滑出。
    右侧 360px(motion.medium 200ms 滑入,遮罩 overlay-light 0.16),标题 20px/600,
    元信息(格式徽标 · 状态徽标 · 上传时间)+ 完整 chunk 原文(可滚动,无分页)
-   + 检索分数与来源模式 +「在文档库中查看」链接;Esc 关闭。 */
+   + 来源模式徽标(弱中性元数据)+「在文档库中查看」链接;Esc 关闭。
+   二轮收蓝(2026-09-11):相关度分数不进普通用户视图(保留在 API 与评测页)。 */
 
 export interface SourceDrawerProps {
   citation: Citation;
@@ -87,9 +88,6 @@ export function SourceDrawer({ citation, onClose }: SourceDrawerProps) {
           </p>
           <div className="mt-3 flex items-center gap-2 border-t border-hairline pt-3">
             <Badge variant={source.variant}>{source.label}</Badge>
-            <span className="text-numeric text-ink-3">
-              相关度 {citation.score.toFixed(2)}
-            </span>
           </div>
           <Link
             href="/documents"

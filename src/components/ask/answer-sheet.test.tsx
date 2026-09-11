@@ -106,7 +106,7 @@ describe("AnswerSheet 结构与 chip", () => {
 });
 
 describe("EvidenceItem 结构与双向联动", () => {
-  it("依据条目:标题/上传时间/引用片段/来源徽标/2 位小数分数/查看原文", () => {
+  it("依据条目:标题/上传时间/引用片段/来源徽标/查看原文;不显示相关度(二轮收蓝)", () => {
     render(<AnswerSheet answer="答案正文" citations={[CITATION]} />);
     expect(screen.getByText("员工手册")).toBeTruthy();
     expect(screen.getByText("md · 上传于 2026-09-01")).toBeTruthy();
@@ -114,7 +114,10 @@ describe("EvidenceItem 结构与双向联动", () => {
       screen.getByText("入职第一年年假为 8 天,第二年起每年增加 1 天。"),
     ).toBeTruthy();
     expect(screen.getByText("混合")).toBeTruthy();
-    expect(screen.getByText("相关度 0.83")).toBeTruthy();
+    // 相关度 = 工程调试信息,不进普通用户视图(保留在 API 与评测页)
+    expect(screen.queryByText(/相关度/)).toBeNull();
+    // 编号 chip = 中性灰(层级低于正文蓝色引用 chip)
+    expect(screen.getByText("[1]").className).toContain("bg-surface-2");
     expect(screen.getByRole("button", { name: "查看原文" })).toBeTruthy();
   });
 
@@ -159,7 +162,7 @@ describe("EvidenceItem 结构与双向联动", () => {
 });
 
 describe("来源抽屉", () => {
-  it("点「查看原文」滑出抽屉:标题/元信息/完整原文/分数/文档库链接,Esc 关闭", () => {
+  it("点「查看原文」滑出抽屉:标题/元信息/完整原文/文档库链接,Esc 关闭(无分数)", () => {
     render(<AnswerSheet answer="答案正文" citations={[CITATION]} />);
     fireEvent.click(screen.getByRole("button", { name: "查看原文" }));
     const dialog = screen.getByRole("dialog", {
@@ -175,7 +178,8 @@ describe("来源抽屉", () => {
         "入职第一年年假为 8 天,第二年起每年增加 1 天,上限 15 天。",
       ),
     ).toBeTruthy();
-    expect(within(dialog).getByText("相关度 0.83")).toBeTruthy();
+    // 二轮收蓝:相关度不进普通用户视图
+    expect(within(dialog).queryByText(/相关度/)).toBeNull();
     expect(within(dialog).getByText("在文档库中查看")).toBeTruthy();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();

@@ -267,7 +267,8 @@ export function AnswerSheet({
                 {isLatest ? "AI 回答" : "上一版回答"}
               </span>
               {isLatest ? (
-                <span className="rounded-sm bg-brand-50 px-1.5 py-0.5 text-caption text-brand-800">
+                /* 状态标而非主按钮:浅蓝底 + 蓝字,收尺寸/内边距,不与 primary 同权重 */
+                <span className="rounded-sm bg-brand-50 px-1 py-0.5 text-caption text-brand-700">
                   最新
                 </span>
               ) : null}
@@ -355,10 +356,11 @@ export function AnswerSheet({
                   ? "✓ 已复制"
                   : "复制失败,请重试"}
             </Button>
-            {/* 有用/无用(3.4.6):互斥选中(浅蓝底 + 深蓝字),重复点击同一项
-                不重复提交;pending 禁用防重复点击;失败恢复原状态 + 轻量提示。
-                选中样式用 aria-pressed 变体:属性选择器特异性高于 ghost 的
-                bg-transparent/text-ink-2,保证选中态必然生效(修复 2026-09-11)。 */}
+            {/* 有用/无用(3.4.6):互斥选中(浅蓝底 + Primary 蓝字/icon,二轮收蓝:
+                不加深蓝),重复点击同一项不重复提交;pending 禁用防重复点击;
+                失败恢复原状态 + 轻量提示。选中样式用 aria-pressed 变体:
+                属性选择器特异性高于 ghost 的 bg-transparent/text-ink-2,
+                保证选中态必然生效(修复 2026-09-11)。 */}
             <span className="ml-2 flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -366,7 +368,7 @@ export function AnswerSheet({
                 aria-pressed={feedback.rating === "useful"}
                 disabled={feedback.pending}
                 onClick={() => void submitFeedback("useful")}
-                className="aria-pressed:bg-brand-50 aria-pressed:text-brand-800 aria-pressed:hover:bg-brand-100"
+                className="aria-pressed:bg-brand-50 aria-pressed:text-brand-600 aria-pressed:hover:bg-brand-100"
               >
                 <IconThumbUp className="size-4" />
                 有用
@@ -377,7 +379,7 @@ export function AnswerSheet({
                 aria-pressed={feedback.rating === "useless"}
                 disabled={feedback.pending}
                 onClick={() => void submitFeedback("useless")}
-                className="aria-pressed:bg-brand-50 aria-pressed:text-brand-800 aria-pressed:hover:bg-brand-100"
+                className="aria-pressed:bg-brand-50 aria-pressed:text-brand-600 aria-pressed:hover:bg-brand-100"
               >
                 <IconThumbDown className="size-4" />
                 无用

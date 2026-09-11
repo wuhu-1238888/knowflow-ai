@@ -321,6 +321,31 @@
 - 语义对照 23 项规格:提问/上传/运行评测 = primary 蓝(自动);引用 chip = 浅蓝底深蓝字(自动);有用/无用选中 = aria-pressed brand-50 浅蓝底 + brand-800 深蓝字(自动,2026-09-11 修复的属性变体直接换色);复制成功 = success-text 绿(自动);重新生成/复制/有用/无用/查看原文默认态 = secondary/ghost 中性(现状本就合规);冲突 = 琥珀、拒答 = 中性灰、错误 = 红、禁用 = 灰(现状合规,零改动);侧栏选中 = brand-100 浅蓝底 + brand-800 深蓝字(克制,无白字蓝块);混合徽标 = 品牌深档蓝(检索模式固定语义,非普通 Badge)。
 - **待人浏览器走查**:1280/1440/1920 三档观感、375px 无溢出、问答页端到端状态(提问→生成中蓝胶囊→回答/引用蓝/有用选中蓝/复制绿/拒答中性灰/冲突琥珀)与 prefers-reduced-motion。
 
+## 3.6.1 QA 页二轮收蓝(Color Polish,2026-09-11 人拍板)
+
+**目标**:品牌色保持 #2563EB 不变,进一步降低蓝色使用密度——「蓝色 = 有意义的强调色,不是默认色」;普通操作与元数据一律中性。
+
+**改动(仍全部经 Token 层,布局/IA/RAG/评测/文档库零触碰)**:
+
+| 元素 | 旧 | 新 |
+| --- | --- | --- |
+| 侧栏导航选中态 | brand-100 底 + brand-800 蓝字 | **brand-50 非常浅蓝底 + ink 深色文字 + brand-600 蓝 icon**(状态提示,非视觉主角;nav.tsx icon 条件着色) |
+| 「最新」状态标 | brand-50 底 + brand-800 字 | brand-50 底 + brand-700 字 + 收内边距 px-1.5→px-1(Status Badge 权重,不与 primary 同级) |
+| 有用/无用选中态 | aria-pressed brand-50 底 + brand-800 字 | **brand-50 底 + brand-600 Primary 蓝字/icon**(不加深蓝) |
+| 来源卡片编号 [n] | brand-100 底 + brand-800 字(与正文引用 chip 同权重) | **surface-2 底 + ink-2 中性灰**(层级:正文引用 chip > 来源编号) |
+| 「混合」来源徽标 | mode-hybrid = brand 深档蓝 | **mode-hybrid token 中性灰 #52525B/#F0F1F4**(检索技术元数据;eval 页不用 mode 徽标,零波及) |
+| 相关度 0.83(依据条目 + 来源抽屉) | 展示 | **普通用户视图隐藏**(分数保留在 API 响应与评测页;UI 原则 #2「工程调试信息不进主流程」首次完全落地) |
+| 提问按钮 / 正文 Citation / 复制成功绿 / 冲突琥珀 / 错误红 / 拒答中性 | — | 均保持(规格确认合规,零改动) |
+
+- 文档:DesignSystem/DesignRules 同步(职责表混合行、组件规格 3/4 分数行、sidebar-item-active token 加 iconColor;DesignRules 禁止事项 +2 条);qa-guide-3.3.2 依据条目口径更新。
+- 测试同步:shell.test(激活态断言 → brand-50/text-ink/icon brand-600)、answer-sheet.test 与 page.test(相关度显示断言 → 断言缺席 + 编号 chip 中性)、badge.test 类名断言不受值变更影响。
+
+**验收对照(22 项)**:#2563EB 保持 ✓;提问 primary 蓝 ✓;secondary 默认 Neutral ✓;有用选中浅蓝+Primary 蓝 ✓;无用未选中 Neutral ✓;Citation 蓝且克制(12px 浅蓝底,未加重)✓;侧栏选中更克制 ✓;最新标降权 ✓;来源编号与 Citation 层级分离 ✓;混合中性 ✓;相关度隐藏 ✓;已复制绿 ✓;冲突琥珀/错误红/拒答中性 ✓;无新增渐变/装饰 ✓;RAG/评测/文档库/布局零改动 ✓;Token 集中管理 ✓。
+
+**验证备注(dev 缓存坑,后续任务参考)**:改完类名后编译 CSS 曾残留死规则(aria-pressed:text-brand-800)——根因 = Tailwind 开发态扫描 .next 里陈旧 HMR 热更新 chunk(内含历史类名字符串)+ 内存候选缓存不随删除失效。处置:杀 dev server → 清空 .next → 重启后死规则归零。今后凡「源码已改但编译产物仍含旧类名」,先查 `grep -r <类名> .next`,命中即按此流程处理。
+
+**待人浏览器走查**:首次回答/引用/来源卡/重新生成/复制/有用/无用/最新/混合/冲突/拒答/错误 12 态观感 + 1280/1440/1920 与 375px。
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->
@@ -333,9 +358,11 @@
 
 {2026-09-09 问答页垂直节奏} → 现象:问答页内容紧贴主内容区顶部(main 无顶部 padding),标题/输入框过早进入视线,缺少从导航进入内容的过渡感。实施:人拍板页面级呼吸空间(其他页维持现状)——根容器 `gap-4` → `gap-6 pt-6 lg:pt-12`(24px <1024px / 48px ≥1024px),页头 → 提问区与各状态区块间统一 24px;加载块去 `py-6` 与结果态同位、不跳动。全部使用既有 spacing token(s6/s12),未新增 token/组件。验证:vitest 59/59(新增垂直节奏断言)、typecheck 干净、SSR 实测类名生效;首屏推演 1280/1440/1920 下提问框均在首屏可见。取舍:垂直节奏为问答页页面级决策,全局 main 的顶部 spacing 未动(避免其他三页整体下移),后续如统一处理需单独拍板。
 
-{2026-09-11 有用/无用反馈选中态不显示} → 现象:用户实测「复制回答」反馈正常,但点「有用/无用」按钮毫无选中视觉变化(疑似反馈未成功)。根因:纯 UI 层问题——DB 中 qa_feedback 已存在用户 POST 的 useful 记录(16:11/16:17 两笔),链路与落库全部正常;Button 组件为纯字符串拼接 className(无 tailwind-merge),选中 className `bg-brand-50 text-brand-800` 与 ghost variant 的 `bg-transparent text-ink-2` 平级冲突,CSS 样式表顺序决定胜负,选中类从未生效。实施:选中态改用 `aria-pressed:` 变体(`aria-pressed:bg-brand-50 aria-pressed:text-brand-800 aria-pressed:hover:bg-brand-100`)——属性选择器 `[aria-pressed="true"]` 特异性(0,2,0)高于基础 variant 类(0,1,0),必然覆盖 ghost 样式;复制按钮同理改 `data-[copied=true]:text-success-text` / `data-[failed=true]:text-danger-text`(复制此前能正常显示因状态文案变更+图标切换不依赖颜色类,颜色类同样存在此冲突,一并修正)。验证:编译后 CSS 实测含 5 条目标规则(aria-pressed ×3 + data-copied ×1 + data-failed ×1,属性选择器形态正确);vitest 167/167(断言同步更新为变体类名);typecheck 干净;零新依赖。取舍:不动 Button 组件引入 tailwind-merge(全局改动面大),按需用属性变体兜底同类冲突。
+{2026-09-11 有用/无用反馈选中态不显示} → 现象:用户实测「复制回答」反馈正常,但点「有用/无用」按钮毫无选中视觉变化(疑似反馈未成功)。根因:纯 UI 层问题——DB 中 qa_feedback 已存在用户 POST 的 useful 记录(16:11/16:17 两笔),链路与落库全部正常;Button 组件为纯字符串拼接 className(无 tailwind-merge),选中 className `bg-brand-50 text-brand-800` 与 ghost variant 的 `bg-transparent text-ink-2` 平级冲突,CSS 样式表顺序决定胜负,选中类从未生效。实施:选中态改用 `aria-pressed:` 变体(浅蓝底 + 深蓝字 + hover 底色三个 brand token 变体类,后于二轮收蓝改 Primary 蓝字)——属性选择器 `[aria-pressed="true"]` 特异性(0,2,0)高于基础 variant 类(0,1,0),必然覆盖 ghost 样式;复制按钮同理改 `data-[copied=true]:text-success-text` / `data-[failed=true]:text-danger-text`(复制此前能正常显示因状态文案变更+图标切换不依赖颜色类,颜色类同样存在此冲突,一并修正)。验证:编译后 CSS 实测含 5 条目标规则(aria-pressed ×3 + data-copied ×1 + data-failed ×1,属性选择器形态正确);vitest 167/167(断言同步更新为变体类名);typecheck 干净;零新依赖。取舍:不动 Button 组件引入 tailwind-merge(全局改动面大),按需用属性变体兜底同类冲突。
 
 {2026-09-11 品牌色紫→蓝 + 颜色语义化} → 背景:人拍板 23 项规格——当前「淡紫色 AI SaaS」视觉倾向偏离「专业、可信、克制的企业知识产品」定位,目标「Blue Enterprise Knowledge Product」;普通操作默认中性,品牌蓝只表达主行动/可追溯证据/选中/聚焦,冲突琥珀、成功绿、错误红、禁用灰、拒答中性。实施:只在 Token 层改值——DesignSystem front matter brand 5 档换蓝阶(#2563EB/#1D4ED8/#1E40AF/#DBEAFE/#EFF6FF)、focus-ring 换蓝、ai-gradient 紫渐变 → 蓝渐变 #1E40AF→#2563EB(两端白字对比度 ≥4.5:1,禁蓝紫混色)、mode-hybrid 随 brand 深档变蓝;DesignRules 新增「颜色语义」职责表 + 3 条禁止事项 + 自检第 12 条;组件零改动(brand token 引用自动跟随,3.5.1 已清零散硬编码),中性系统与 success/warning/danger/info 语义色不动。验证:vitest 168/168(L1 对拍自动跟随)、typecheck 干净、SSR 四页 200;编译 CSS 蓝值 10 处生效、旧紫值三处 grep 零残留;gradient 白名单不变。取舍:brand 命名保留(不重命名 primary,避免全站类名迁移无谓风险);ai-gradient 保留(蓝渐变 = AI 在场标识,白名单内,非营销渐变);混合徽标 = 品牌深档蓝(检索模式固定语义,不按「普通 Badge 中性化」处理)。
+
+{2026-09-11 QA 页二轮收蓝} → 背景:品牌蓝到位后人再拍板——「保留蓝色品牌识别,进一步降低蓝色使用密度」,蓝 ≈15% 是强调色不是默认色;混合徽标与相关度分数是检索技术元数据,不属 Brand/Primary/Citation/Selected,不应占品牌蓝、不应污染普通用户视图。实施:导航选中态 brand-100 底+brand-800 字 → brand-50 底+ink 深字+brand-600 icon(nav.tsx icon 条件着色);「最新」标降权(px-1.5→px-1、brand-800→brand-700 字);有用/无用选中态字色 brand-800 → brand-600(浅蓝底 + Primary 蓝,不加深蓝);来源编号 chip 从 brand-100/brand-800 → surface-2/ink-2(与正文引用 chip 形成层级);mode-hybrid token 中性灰 #52525B/#F0F1F4(eval 页不用 mode 徽标,零波及);依据条目与来源抽屉移除相关度展示(分数保留在 API 响应与评测页,UI 原则 #2 落地)。验证:vitest 168/168(断言同步:shell 激活态、相关度缺席、编号 chip 中性)、typecheck、SSR、编译 CSS 蓝密度核查。取舍:向量青/关键词石板保留固定语义色(人只指定混合中性化);正文引用 chip 保持 brand-100 底蓝字(未加重,蓝色权重经来源编号中性化后已分层)。
 
 ## 已解决的问题
 
