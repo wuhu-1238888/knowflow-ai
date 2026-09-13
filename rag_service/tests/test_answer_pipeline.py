@@ -7,11 +7,21 @@ import pytest
 
 from rag_service.answer_pipeline import (
     DEGRADE_MESSAGE,
+    DEGRADE_MESSAGES,
     AnswerPipeline,
     build_context,
+    provider_error_kind,
     refusal_score,
 )
-from rag_service.llm_adapter import AnswerDraft, Citation, Conflict
+from rag_service.llm_adapter import (
+    AnswerDraft,
+    Citation,
+    Conflict,
+    ProviderAuthError,
+    ProviderNetworkError,
+    ProviderNotConfiguredError,
+    ProviderTimeoutError,
+)
 from rag_service.retrieval import SearchHit
 
 TEXT_A = "年假每年 10 天,司龄每满一年增加 1 天,上限 15 天。"
@@ -282,8 +292,34 @@ def test_llm_exception_retries_then_degrades():
     result = pipeline.answer("问题", [hit("doc-a")], mode="hybrid_rerank")
     assert provider.calls == 2  # 首试 + 重试 1 次
     assert result.no_answer is False
-    assert result.answer == DEGRADE_MESSAGE
+    assert result.answer == DEGRADE_MESSAGE  # 普通异常(无 kind)→ 通用话术
     assert result.citations == []
+
+
+@pytest.mark.parametrize(
+    ("error", "kind"),
+    [
+        (ProviderNotConfiguredError("未配置"), "not_configured"),
+        (ProviderAuthError("401"), "auth"),
+        (ProviderTimeoutError("超时"), "timeout"),
+        (ProviderNetworkError("网络"), "network"),
+    ],
+)
+def test_degrade_message_matches_error_kind(error, kind):
+    """失败类别 → 用户可见降级话术区分;绝不 fallback mock(话术与 provider 无关)。"""
+    assert provider_error_kind(error) == kind
+    provider = FakeProvider(errors=[error, error])
+    pipeline = AnswerPipeline(provider)
+    result = pipeline.answer("问题", [hit("doc-a")], mode="hybrid_rerank")
+    assert provider.calls == 2  # 首试 + 重试 1 次
+    assert result.no_answer is False
+    assert result.answer == DEGRADE_MESSAGES[kind]
+    assert result.citations == []
+
+
+def test_provider_error_kind_plain_exception_defaults_to_api():
+    assert provider_error_kind(RuntimeError("boom")) == "api"
+    assert provider_error_kind(ValueError("x")) == "api"
 
 
 def test_schema_failure_retries_then_refuses():

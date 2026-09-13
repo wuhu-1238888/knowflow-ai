@@ -8,8 +8,9 @@
 - FR-07 冲突由 LLM 标注,规则侧校验双方 doc 均在本次检索结果内;LLM 未标注但答案含
   冲突表述且引用恰好双方文档时,规则侧兜底补全(2026-09-10 人拍板:真实重跑 C13/C14
   模型散文并列呈现但未输出结构化 conflicts 的处置),并列呈现不选边;
-- LLM 异常 → 重试 1 次 → 仍失败返回标准降级话术;schema 校验失败 → 重试 1 次
-  → 按拒答处理并留日志;
+- LLM 异常 → 重试 1 次 → 仍失败返回降级话术(按 ProviderError.kind 区分
+  未配置/认证失败/超时/网络,见 DEGRADE_MESSAGES;绝不 fallback mock);
+  schema 校验失败 → 重试 1 次 → 按拒答处理并留日志;
 - 审计最小落点:全字段进 QA 日志(API 层落库,非本模块)。
 """
 
@@ -31,6 +32,16 @@ CONTEXT_MAX_CHARS = 4500  # token 预算约 3000(中文 1 token ≈ 1.5 字符�
 
 REFUSE_MESSAGE = "抱歉,当前知识库中没有找到足够相关的答案。您可以尝试换一种问法,或先上传相关文档。"
 DEGRADE_MESSAGE = "回答服务暂时不可用,请稍后重试。"
+
+# 降级话术按失败类别区分(键 = llm_adapter.ProviderError.kind):
+# 普通异常 / 未知类别 → DEGRADE_MESSAGE(api)。绝不 fallback 回 mock,
+# 也不展示 provider 内部错误细节(细节只在服务端日志)。
+DEGRADE_MESSAGES = {
+    "not_configured": "回答服务未配置 LLM 密钥,暂时无法生成回答。请联系管理员在服务端配置后重试。",
+    "auth": "LLM 服务认证失败(API Key 无效或已过期),暂时无法生成回答。请联系管理员检查密钥后重试。",
+    "timeout": "回答生成超时,请稍后重试。",
+    "network": "LLM 服务网络异常,暂时无法生成回答,请稍后重试。",
+}
 
 GENERATE_RETRIES = 1  # 失败后的重试次数(共 1 + 1 次尝试)
 
@@ -80,6 +91,12 @@ def display_score(hit: SearchHit, mode: str) -> float:
     if mode == "hybrid_rerank" and hit.rerank_score is not None:
         return hit.rerank_score
     return hit.score
+
+
+def provider_error_kind(exc: Exception) -> str:
+    """异常 → 失败类别:ProviderError.kind;普通异常(含 mock/未知) → 'api'
+    (映射 DEGRADE_MESSAGE 通用话术)。"""
+    return getattr(exc, "kind", None) or "api"
 
 
 def _fallback_conflicts(answer: str, citations: list[dict]) -> list[dict] | None:
@@ -144,11 +161,17 @@ class AnswerPipeline:
                 relevant_hits=len(hits),
             )
         context = build_context(hits)
-        draft, failure = self._generate(query, context)
+        draft, failure, kind = self._generate(query, context)
         if failure == "exception":
-            logger.warning("生成 %s 次均异常,返回降级话术(模式 %s)", GENERATE_RETRIES + 1, mode)
+            message = DEGRADE_MESSAGES.get(kind, DEGRADE_MESSAGE)
+            logger.warning(
+                "生成 %s 次均异常(类别 %s),返回降级话术(模式 %s)",
+                GENERATE_RETRIES + 1,
+                kind,
+                mode,
+            )
             return AnswerResult(
-                answer=DEGRADE_MESSAGE, citations=[], no_answer=False,
+                answer=message, citations=[], no_answer=False,
                 confidence=confidence, conflicts=None,
             )
         if failure == "schema":
@@ -170,19 +193,23 @@ class AnswerPipeline:
     # ── 生成 + 重试 ──
 
     def _generate(self, query: str, chunks: list[RetrievedChunk]):
-        """返回 (draft, failure);failure ∈ {None, 'exception', 'schema'}。"""
+        """返回 (draft, failure, kind);failure ∈ {None, 'exception', 'schema'};
+        kind = 最后一次异常的失败类别(exception 时有效,决定降级话术),
+        成功 / schema 失败为 None。"""
         failure = "schema"
+        kind = None
         for attempt in range(GENERATE_RETRIES + 1):
             try:
                 draft = self._provider.generate(query, chunks)
             except Exception as exc:  # LLM 异常 → 重试,重试耗尽 → 降级话术
                 failure = "exception"
+                kind = provider_error_kind(exc)
                 logger.warning("第 %s 次生成异常: %s: %s", attempt + 1, type(exc).__name__, exc)
                 continue
             if self._schema_ok(draft):
-                return draft, None
+                return draft, None, None
             logger.warning("第 %s 次 schema 校验失败", attempt + 1)
-        return None, failure
+        return None, failure, kind
 
     @staticmethod
     def _schema_ok(draft: AnswerDraft) -> bool:

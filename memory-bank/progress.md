@@ -413,6 +413,25 @@
 
 **待人浏览器走查**:qa-guide-3.6.2.md 第 10 节(列对齐目视 + 1280/1440/1920 三档 + 重建索引/删除功能回归)。
 
+## 3.6.5 真实 LLM(DeepSeek)接入检查与失败话术分类(2026-09-13,机器侧完成)
+
+**背景**:人下达规格「检查并修复『真实 LLM 未配置、回答仍走 Mock』」。**检查结论:后端已在走真实 DeepSeek**——.env 由人写入 `LLM_PROVIDER=deepseek` + `DEEPSEEK_API_KEY`,config.load_dotenv 在模块导入时加载,get_provider() 返回 DeepSeekProvider;此前「Mock 提示」来自 .env 更新前的旧报告快照。全链路(provider 工厂 / 管线 / API / BFF)无任何 fallback-to-mock 代码路径。按规格七补齐两处缺口:失败话术不区分类别、无 provider 启动日志。
+
+**实施**:
+
+- `llm_adapter.py`:新增 `ProviderError` 异常族(RuntimeError 子类,兼容既有捕获)——kind 分类 not_configured / auth / timeout / network / api。
+- `deepseek_provider.py`:未配置 / 超时 / 网络 / 401·403 / 其他 HTTP 错误按类别抛对应异常(消息文本不变,既有测试匹配保持)。
+- `answer_pipeline.py`:新增 `DEGRADE_MESSAGES`(未配置/认证失败/超时/网络四类用户话术)+ `provider_error_kind()` 辅助;普通异常 → 通用话术;**绝不 fallback mock**、不向用户暴露 provider 内部细节(细节只在服务端日志)。
+- `main.py`:首次创建管线时 `logger.info("LLM provider = %s")`(只记类型名,不输出 Key);为 rag_service.main logger 挂 StreamHandler(uvicorn 默认不配置应用 logger,INFO 会被丢弃);修正模块 docstring 过时表述(ask 30s 上限 → 60s 单次 LLM 超时 + BFF 120s 预算,存在外部调用)。
+
+**验证(机器侧,数值均实测)**:
+
+- 真实 E2E:「年假有几天?」8000 直连 200(合成回答带 [1] 标记,elapsed 62s = 真实 API 调用,citation 富字段齐全:doc-hr-05 / NovaTech 请假制度 / md / indexed);3001 BFF 同内容 200(34s)。「公司今年计划收购哪家公司?」双链路 no_answer=true、refusal_reason=insufficient、answer=None(拒答不编造)。dev log 出现「[rag] INFO: LLM provider = DeepSeekProvider」。
+- 后端 pytest **206/206**(基线 198 + 8:类别话术 4 例、kind 辅助 1 例、非 200 参数化 +2、网络异常 1 例);前端 vitest 199/199(未改动);typecheck 干净。
+- 安全:`.env` 未被 Git 跟踪(git ls-files 仅 .env.example),提交 diff 无 Key;前端无任何 DEEPSEEK/NEXT_PUBLIC_* 引用(Key 只存后端)。
+
+**待人浏览器走查**:qa-guide-3.6.2.md 第 11 节(真实回答 + chip 联动 + 拒答 + 日志;失败态可选,需临时改动 .env 并恢复)。
+
 ## 修订
 
 <!-- 格式:{YYYY-MM-DD 主题} → 背景/现象与根因/实施/验证/已知取舍 -->

@@ -5,12 +5,13 @@
 
 create_app 工厂支持测试注入(service/pipeline/repo/index);生产路径懒加载真实模型
 (首次 ask/ingest 才加载 bge-m3,vector/hybrid 不加载 reranker,hybrid_rerank 按需加载)。
-ask 30s 上限 = LLM 调用超时(真实 provider 骨架实现时生效);本地推理同步执行,
-无外部调用。错误码按 technical-design「API 层约定」:400 参数错误 / 404 资源不存在 /
-422 解析失败(行保留 failed 状态,表格可重试)/ 500 内部异常。
+ask 链路:检索本地同步;LLM 调用真实 provider 时单次超时 60s(deepseek_provider),
+前端 BFF 预算 120s。错误码按 technical-design「API 层约定」:400 参数错误 /
+404 资源不存在 / 422 解析失败(行保留 failed 状态,表格可重试)/ 500 内部异常。
 """
 
 import json
+import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,6 +31,15 @@ from .llm_adapter import get_provider
 from .parsing import SUPPORTED_EXTENSIONS, EmptyTextError, ParsingError, parse_file
 from .repository import Repository, new_id, now_iso
 from .retrieval import BgeReranker, RetrievalService, TOP_K
+
+logger = logging.getLogger(__name__)
+# uvicorn 默认不配置 root/应用 logger(INFO 被 lastResort 丢弃)→ 显式挂 handler,
+# 使「LLM provider = …」等开发日志可见;仅影响本模块,不动其他 logger。
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(levelname)s:     %(message)s"))
+    logger.addHandler(_handler)
+logger.setLevel(logging.INFO)
 
 
 class AskRequest(BaseModel):
@@ -67,7 +77,10 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
 
     def _pipeline() -> AnswerPipeline:
         if state["pipeline"] is None:
-            state["pipeline"] = AnswerPipeline(get_provider())
+            provider = get_provider()
+            # 开发日志明确记录实际 provider(不输出 API Key;测试注入 pipeline 时不打)
+            logger.info("LLM provider = %s", type(provider).__name__)
+            state["pipeline"] = AnswerPipeline(provider)
         return state["pipeline"]
 
     def _index() -> LanceIndex:

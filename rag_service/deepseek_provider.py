@@ -3,7 +3,7 @@
 契约与 MockProvider 一致(LLMProvider):输入 query + 检索块,输出 AnswerDraft。
 设计边界(与 answer_pipeline 分工):
 - Key 只从 .env 读(DEEPSEEK_API_KEY,由 config.load_dotenv 加载),AI 绝不写 Key、
-  绝不入库;未配置时抛 RuntimeError(提示人写 Key 或改用 mock);
+  绝不入库;未配置时抛 ProviderNotConfiguredError(提示人写 Key 或改用 mock);
 - 引用编号 = prompt 中上下文块编号 [n],provider 映射「模型选了哪些块」并把正文
   [n] 标记同步重写为稠密编号、删除悬空标记(见 _renumber_markers);quote 与最终
   校验仍由管线层规则侧重建(见 answer_pipeline._map_citations),绝不信任模型自报来源;
@@ -20,7 +20,17 @@ import re
 
 import httpx
 
-from .llm_adapter import AnswerDraft, Citation, Conflict, RetrievedChunk
+from .llm_adapter import (
+    AnswerDraft,
+    Citation,
+    Conflict,
+    ProviderAuthError,
+    ProviderError,
+    ProviderNetworkError,
+    ProviderNotConfiguredError,
+    ProviderTimeoutError,
+    RetrievedChunk,
+)
 
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
@@ -118,7 +128,7 @@ class DeepSeekProvider:
 
     def generate(self, query: str, chunks: list[RetrievedChunk]) -> AnswerDraft:
         if not self.api_key:
-            raise RuntimeError(
+            raise ProviderNotConfiguredError(
                 "DEEPSEEK_API_KEY 未配置:请由人写入 .env(遗留 #1);"
                 "开发与评测请使用默认 LLM_PROVIDER=mock"
             )
@@ -148,7 +158,7 @@ class DeepSeekProvider:
             "response_format": {"type": "json_object"},  # OpenAI 兼容:强制 JSON 输出
         }
 
-    # ── HTTP 调用(超时/网络/HTTP 错误统一转 RuntimeError,交给管线重试)──
+    # ── HTTP 调用(超时/网络/HTTP 错误按类别转 ProviderError,交给管线重试)──
 
     def _chat_completion(self, payload: dict) -> dict:
         try:
@@ -159,11 +169,18 @@ class DeepSeekProvider:
                     json=payload,
                 )
         except httpx.TimeoutException as exc:
-            raise RuntimeError(f"DeepSeek 调用超时({self.timeout:g}s)") from exc
+            raise ProviderTimeoutError(f"DeepSeek 调用超时({self.timeout:g}s)") from exc
         except httpx.HTTPError as exc:
-            raise RuntimeError(f"DeepSeek 网络错误: {type(exc).__name__}: {exc}") from exc
+            raise ProviderNetworkError(
+                f"DeepSeek 网络错误: {type(exc).__name__}: {exc}"
+            ) from exc
         if response.status_code != 200:
-            raise RuntimeError(
+            error_cls = (
+                ProviderAuthError
+                if response.status_code in (401, 403)
+                else ProviderError
+            )
+            raise error_cls(
                 f"DeepSeek API 错误 {response.status_code}: {response.text[:200]}"
             )
         return response.json()

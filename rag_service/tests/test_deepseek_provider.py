@@ -15,7 +15,14 @@ from rag_service.deepseek_provider import (
     _extract_json,
     _renumber_markers,
 )
-from rag_service.llm_adapter import RetrievedChunk
+from rag_service.llm_adapter import (
+    ProviderAuthError,
+    ProviderError,
+    ProviderNetworkError,
+    ProviderNotConfiguredError,
+    ProviderTimeoutError,
+    RetrievedChunk,
+)
 
 
 def chunk(i: int, doc_id: str = "doc-a") -> RetrievedChunk:
@@ -46,7 +53,7 @@ def stubbed(monkeypatch, body=None) -> DeepSeekProvider:
 
 def test_missing_key_raises(monkeypatch):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
-    with pytest.raises(RuntimeError, match="DEEPSEEK_API_KEY 未配置"):
+    with pytest.raises(ProviderNotConfiguredError, match="DEEPSEEK_API_KEY 未配置"):
         DeepSeekProvider().generate("问题", CHUNKS)
 
 
@@ -346,10 +353,18 @@ def test_http_request_shape(monkeypatch):
     assert draft.answer == "x"
 
 
-def test_non_200_raises(monkeypatch):
+@pytest.mark.parametrize(
+    ("status", "error_cls"),
+    [
+        (401, ProviderAuthError),
+        (403, ProviderAuthError),
+        (500, ProviderError),  # 非认证类 HTTP 错误 → 基类(kind=api)
+    ],
+)
+def test_non_200_raises(monkeypatch, status, error_cls):
     class FakeResponse:
-        status_code = 401
-        text = '{"error": "bad key"}'
+        status_code = status
+        text = '{"error": "boom"}'
 
     class FakeClient:
         def __init__(self, timeout):
@@ -365,11 +380,11 @@ def test_non_200_raises(monkeypatch):
             return FakeResponse()
 
     monkeypatch.setattr("rag_service.deepseek_provider.httpx.Client", FakeClient)
-    with pytest.raises(RuntimeError, match="401"):
+    with pytest.raises(error_cls, match=str(status)):
         DeepSeekProvider(api_key="k").generate("问题", CHUNKS)
 
 
-def test_timeout_maps_to_runtime_error(monkeypatch):
+def test_timeout_maps_to_provider_timeout_error(monkeypatch):
     import httpx
 
     class FakeClient:
@@ -386,7 +401,28 @@ def test_timeout_maps_to_runtime_error(monkeypatch):
             raise httpx.TimeoutException("timed out")
 
     monkeypatch.setattr("rag_service.deepseek_provider.httpx.Client", FakeClient)
-    with pytest.raises(RuntimeError, match="超时"):
+    with pytest.raises(ProviderTimeoutError, match="超时"):
+        DeepSeekProvider(api_key="k").generate("问题", CHUNKS)
+
+
+def test_network_error_maps_to_provider_network_error(monkeypatch):
+    import httpx
+
+    class FakeClient:
+        def __init__(self, timeout):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def post(self, *args, **kwargs):
+            raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr("rag_service.deepseek_provider.httpx.Client", FakeClient)
+    with pytest.raises(ProviderNetworkError, match="网络错误"):
         DeepSeekProvider(api_key="k").generate("问题", CHUNKS)
 
 

@@ -58,6 +58,37 @@ class LLMProvider(Protocol):
     def generate(self, query: str, chunks: list[RetrievedChunk]) -> AnswerDraft: ...
 
 
+class ProviderError(RuntimeError):
+    """LLM provider 调用失败基类;kind = 失败类别,管线据此映射用户可见降级话术
+    (answer_pipeline.DEGRADE_MESSAGES)。仍是 RuntimeError,既有捕获与日志兼容。"""
+
+    kind = "api"
+
+
+class ProviderNotConfiguredError(ProviderError):
+    """API Key 未配置(.env 未写 DEEPSEEK_API_KEY)。"""
+
+    kind = "not_configured"
+
+
+class ProviderAuthError(ProviderError):
+    """认证失败(401/403:Key 无效、被吊销或已过期)。"""
+
+    kind = "auth"
+
+
+class ProviderTimeoutError(ProviderError):
+    """调用超时。"""
+
+    kind = "timeout"
+
+
+class ProviderNetworkError(ProviderError):
+    """网络异常(连接失败 / DNS / TLS 等)。"""
+
+    kind = "network"
+
+
 def get_provider() -> LLMProvider:
     """工厂:按环境变量 LLM_PROVIDER 选择实现,默认 mock。"""
     name = os.environ.get("LLM_PROVIDER", "mock").strip().lower()
