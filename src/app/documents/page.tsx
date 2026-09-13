@@ -20,6 +20,7 @@ import {
   uploadDocument,
 } from "@/lib/rag";
 import type { DocumentInfo } from "@/lib/rag";
+import { setNavSource } from "@/lib/nav-context";
 
 /* 文档库页(DesignRules 文档库页):上传区 + 文档表格 + 删除 danger 二次确认 +
    重建索引。上传 = 表格内乐观行(待索引徽标),无全局遮罩;
@@ -46,6 +47,11 @@ export default function DocumentsPage() {
     title: string;
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /* 返回上下文(2026-09-13):挂载时标记来源,供文档详情页「返回文档库」判断 */
+  useEffect(() => {
+    setNavSource("docs");
+  }, []);
 
   useEffect(() => {
     if (!notice) {

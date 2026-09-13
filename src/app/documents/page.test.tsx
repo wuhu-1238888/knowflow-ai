@@ -99,6 +99,7 @@ function fileInputOf(container: HTMLElement) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  sessionStorage.clear();
 });
 
 describe("DocumentsPage 列表", () => {
@@ -160,6 +161,15 @@ describe("DocumentsPage 列表", () => {
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     expect(await screen.findByText("员工手册.md")).toBeTruthy();
     expect(getMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("挂载时标记来源 docs(2026-09-13:供文档详情页返回文档库判断)", async () => {
+    stubRoutes({
+      GET_documents: () => Promise.resolve(jsonResponse(DOCS_RESPONSE)),
+    });
+    render(<DocumentsPage />);
+    await screen.findByText("员工手册.md");
+    expect(sessionStorage.getItem("kf:nav:last-source")).toBe("docs");
   });
 });
 

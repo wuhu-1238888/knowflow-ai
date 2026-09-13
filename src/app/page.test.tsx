@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AskPage from "@/app/page";
 
@@ -97,8 +97,14 @@ function requestBody(calls: [string, RequestInit][], callIndex = 0) {
   return JSON.parse(Buffer.from(init.body as ArrayBuffer).toString("utf-8"));
 }
 
+/* 2026-09-13 起页面向 sessionStorage 写来源标记与会话快照,每例清空隔离 */
+beforeEach(() => {
+  sessionStorage.clear();
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  sessionStorage.clear();
 });
 
 describe("AskPage idle 态", () => {
@@ -579,5 +585,65 @@ describe("AskPage 拒答 / 冲突 / 失败", () => {
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     expect(await screen.findByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
     expect(askCalls(fetchMock)).toHaveLength(2);
+  });
+});
+
+describe("AskPage 返回上下文(2026-09-13)", () => {
+  it("挂载时向 sessionStorage 标记来源 qa(供文档详情页返回判断)", () => {
+    render(<AskPage />);
+    expect(sessionStorage.getItem("kf:nav:last-source")).toBe("qa");
+  });
+
+  it("会话快照:从「查看原文」返回(卸载后重挂载)恢复问题/回答/历史,不发新 /api/ask", async () => {
+    const fetchMock = stubFetchWithFeedback(async () => jsonResponse(ANSWER_RESPONSE));
+    const first = render(<AskPage />);
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("region", { name: "最近问过" })).getAllByRole(
+          "button",
+        ),
+      ).toHaveLength(1),
+    );
+
+    // 模拟离开问答页(进入文档详情)再返回:卸载后全新挂载
+    first.unmount();
+    render(<AskPage />);
+
+    const input = screen.getByLabelText("提问内容") as HTMLTextAreaElement;
+    expect(input.value).toBe("年假有几天?");
+    expect(await screen.findByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    expect(
+      screen.getByText((_, el) => el?.textContent === "依据 1 条"),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "最近问过" })).getAllByRole(
+        "button",
+      ),
+    ).toHaveLength(1);
+    // 恢复为纯状态回放,不新增业务请求(仅 AnswerSheet 挂载时的反馈 GET)
+    expect(askCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it("拒答 + 上一版快照:返回后拒答卡与折叠的上一版均恢复", async () => {
+    const impl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse({ ...REFUSE_RESPONSE, qa_id: "qa-refuse-2" }));
+    stubFetchWithFeedback(impl);
+    const first = render(<AskPage />);
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    await screen.findByText("知识库中未找到答案");
+
+    first.unmount();
+    render(<AskPage />);
+
+    // 拒答卡恢复 + 原回答降级的上一版恢复(展开可见)
+    expect(await screen.findByText("知识库中未找到答案")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /上一版回答/ }));
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
   });
 });

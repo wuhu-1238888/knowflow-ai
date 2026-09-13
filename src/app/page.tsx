@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AnswerSheet } from "@/components/ask/answer-sheet";
 import { AskTextarea } from "@/components/ask/ask-textarea";
@@ -11,7 +11,9 @@ import { RecentQuestions, type HistoryEntry } from "@/components/ask/recent-ques
 import { QuestionChip } from "@/components/ask/question-chip";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { loadAskSnapshot, saveAskSnapshot } from "@/lib/ask-state";
 import { versionAgeLabel } from "@/lib/format";
+import { setNavSource } from "@/lib/nav-context";
 import { ApiError, askQuestion, type AskResponse } from "@/lib/rag";
 
 /* 问答页(3.3.2 全量):提问 → 带引用回答 / 拒答 / 冲突 / 失败,回答与依据同屏并置。
@@ -45,6 +47,40 @@ export default function AskPage() {
   const [lastQuery, setLastQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  /* 返回上下文(2026-09-13):挂载时标记来源(供文档详情页返回判断)并恢复
+     本标签页的会话快照(从「查看原文」返回时问答上下文不丢)。 */
+  useEffect(() => {
+    setNavSource("qa");
+    const snapshot = loadAskSnapshot();
+    if (snapshot) {
+      setQuery(snapshot.query);
+      setLastQuery(snapshot.lastQuery);
+      setLatest(snapshot.latest);
+      setPrevious(snapshot.previous);
+      setRefusal(snapshot.refusal);
+      setSameNotice(snapshot.sameNotice);
+      setHistory(snapshot.history);
+    }
+  }, []);
+
+  /* 快照持久化:跳过挂载当帧(此时恢复 effect 尚未落位,空态会覆盖已存快照)。 */
+  const skipSaveRef = useRef(true);
+  useEffect(() => {
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false;
+      return;
+    }
+    saveAskSnapshot({
+      query,
+      lastQuery,
+      latest,
+      previous,
+      refusal,
+      sameNotice,
+      history,
+    });
+  }, [query, lastQuery, latest, previous, refusal, sameNotice, history]);
 
   /* 会话历史 upsert:同问题覆盖为最新快照,最近的在最前,上限 6 条 */
   const pushHistory = (entry: HistoryEntry) => {

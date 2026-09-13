@@ -6,12 +6,19 @@ import { chunkHeading } from "@/lib/chunk-format";
 
 /* L3 文档详情页测试(2026-09-13 闭环优化,规格 4.1/4.2/4.3):
    基本信息 + 内容预览 + Chunk 列表(标题提取/摘要回退)/ 404 / 失败重试 /
-   failed 状态细分(解析失败 vs 索引失败)。
-   useParams 用 hoisted 可变 mock 控制路由 id;fetch 全局打桩(同 rag.test 方式)。 */
+   failed 状态细分(解析失败 vs 索引失败)/ 返回上下文(来源感知)。
+   useParams/useSearchParams 用 hoisted 可变 mock 控制路由;useRouter 记录
+   back/push 调用;fetch 全局打桩(同 rag.test 方式)。 */
 
-const { routeId } = vi.hoisted(() => ({ routeId: { value: "doc-1" } }));
+const { routeId, searchParams, routerMock } = vi.hoisted(() => ({
+  routeId: { value: "doc-1" },
+  searchParams: { value: "" },
+  routerMock: { back: vi.fn(), push: vi.fn() },
+}));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: routeId.value }),
+  useSearchParams: () => new URLSearchParams(searchParams.value),
+  useRouter: () => routerMock,
 }));
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -49,6 +56,10 @@ function stubFetch(impl: (url: string, init: RequestInit) => Promise<Response>) 
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  sessionStorage.clear();
+  searchParams.value = "";
+  routerMock.back.mockClear();
+  routerMock.push.mockClear();
 });
 
 describe("chunkHeading", () => {
@@ -156,5 +167,81 @@ describe("DocumentDetailPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     expect(await screen.findByText("员工手册.md")).toBeTruthy();
     expect(impl).toHaveBeenCalledTimes(2);
+  });
+
+  it("布局(2026-09-13):顶部呼吸空间 pt-6 lg:pt-8,返回入口与标题间 gap-6", async () => {
+    stubFetch(async () => jsonResponse(DETAIL));
+    const { container } = render(<DocumentDetailPage />);
+    await screen.findByText("员工手册.md");
+
+    const root = container.firstElementChild;
+    expect(root?.className).toContain("pt-6");
+    expect(root?.className).toContain("lg:pt-8");
+    expect(root?.className).toContain("gap-6");
+  });
+
+  it("布局(2026-09-13):四列信息摘要等宽均匀 + 每列内容水平居中", async () => {
+    stubFetch(async () => jsonResponse(DETAIL));
+    const { container } = render(<DocumentDetailPage />);
+    await screen.findByText("员工手册.md");
+
+    const dl = container.querySelector("dl");
+    expect(dl?.className).toContain("grid-cols-2");
+    expect(dl?.className).toContain("lg:grid-cols-4");
+    const cells = dl?.querySelectorAll(":scope > div");
+    expect(cells).toHaveLength(4);
+    cells?.forEach((cell) =>
+      expect(cell.className).toContain("text-center"),
+    );
+  });
+});
+
+describe("DocumentDetailPage 返回上下文(2026-09-13)", () => {
+  it("知识问答进入(?from=qa + 来源标记 qa):显示「返回知识问答」,点击 router.back()", async () => {
+    searchParams.value = "from=qa";
+    sessionStorage.setItem("kf:nav:last-source", "qa");
+    stubFetch(async () => jsonResponse(DETAIL));
+    render(<DocumentDetailPage />);
+    await screen.findByText("员工手册.md");
+
+    const back = screen.getByRole("link", { name: "← 返回知识问答" });
+    expect(back.getAttribute("href")).toBe("/");
+    fireEvent.click(back);
+    expect(routerMock.back).toHaveBeenCalledTimes(1);
+    expect(routerMock.push).not.toHaveBeenCalled();
+  });
+
+  it("?from=qa 但无来源标记(新标签页直接打开):兜底 push 到知识问答", async () => {
+    searchParams.value = "from=qa";
+    stubFetch(async () => jsonResponse(DETAIL));
+    render(<DocumentDetailPage />);
+    await screen.findByText("员工手册.md");
+
+    fireEvent.click(screen.getByRole("link", { name: "← 返回知识问答" }));
+    expect(routerMock.back).not.toHaveBeenCalled();
+    expect(routerMock.push).toHaveBeenCalledWith("/");
+  });
+
+  it("文档库进入(来源标记 docs):「返回文档库」,点击 router.back() 保留列表浏览状态", async () => {
+    sessionStorage.setItem("kf:nav:last-source", "docs");
+    stubFetch(async () => jsonResponse(DETAIL));
+    render(<DocumentDetailPage />);
+    await screen.findByText("员工手册.md");
+
+    const back = screen.getByRole("link", { name: "← 返回文档库" });
+    expect(back.getAttribute("href")).toBe("/documents");
+    fireEvent.click(back);
+    expect(routerMock.back).toHaveBeenCalledTimes(1);
+    expect(routerMock.push).not.toHaveBeenCalled();
+  });
+
+  it("直接访问(无 from 无标记):默认「返回文档库」,push /documents", async () => {
+    stubFetch(async () => jsonResponse(DETAIL));
+    render(<DocumentDetailPage />);
+    await screen.findByText("员工手册.md");
+
+    fireEvent.click(screen.getByRole("link", { name: "← 返回文档库" }));
+    expect(routerMock.back).not.toHaveBeenCalled();
+    expect(routerMock.push).toHaveBeenCalledWith("/documents");
   });
 });

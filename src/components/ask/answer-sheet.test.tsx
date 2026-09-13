@@ -190,12 +190,13 @@ describe("来源抽屉", () => {
     // 二轮收蓝:相关度不进普通用户视图
     expect(within(dialog).queryByText(/相关度/)).toBeNull();
     expect(within(dialog).getByText("在文档库中查看")).toBeTruthy();
-    // 2026-09-13 闭环优化:链接直达文档详情页(原为列表页伪链接)
+    // 2026-09-13 闭环优化:链接直达文档详情页(原为列表页伪链接);
+    // from=qa 让详情页返回入口显示「返回知识问答」(来源上下文返回)
     expect(
       within(dialog)
         .getByRole("link", { name: "在文档库中查看" })
         .getAttribute("href"),
-    ).toBe("/documents/doc-1");
+    ).toBe("/documents/doc-1?from=qa");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
   });

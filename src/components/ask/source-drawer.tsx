@@ -110,9 +110,10 @@ export function SourceDrawer({ citation, onClose }: SourceDrawerProps) {
           <div className="mt-3 flex items-center gap-2 border-t border-hairline pt-3">
             <Badge variant={source.variant}>{source.label}</Badge>
           </div>
-          {/* 2026-09-13 闭环优化:真实定位到该文档详情页(原为列表页伪链接) */}
+          {/* 2026-09-13 闭环优化:真实定位到该文档详情页(原为列表页伪链接);
+              from=qa 让详情页返回入口显示「返回知识问答」(来源上下文返回) */}
           <Link
-            href={`/documents/${encodeURIComponent(citation.doc_id)}`}
+            href={`/documents/${encodeURIComponent(citation.doc_id)}?from=qa`}
             className="mt-3 inline-block text-body-sm text-brand-800 transition-colors duration-150 hover:underline"
           >
             在文档库中查看
