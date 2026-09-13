@@ -76,7 +76,26 @@ function SkeletonRows({ rows = 3 }: { rows?: number }) {
   );
 }
 
-/* 矩阵表:行 = 批次内已完成模式;场景列来自逐例明细,缺失的行单元格回退 "—"。 */
+/* 矩阵场景列表头短名:长类别名 → 紧凑表头(2026-09-13 视觉优化);
+   未知类别原样回退显示,不虚构映射。 */
+const CATEGORY_LABELS: Record<string, string> = {
+  精确关键词检索: "关键词",
+  语义检索: "语义",
+  多文档问题: "多文档",
+  相似文档干扰: "相似干扰",
+  专业术语: "术语",
+  文档冲突: "冲突",
+};
+
+const shortCategory = (category: string) => CATEGORY_LABELS[category] ?? category;
+
+/* 矩阵表:行 = 批次内已完成模式;场景列来自逐例明细,缺失的行单元格回退 "—"。
+ * 视觉口径(2026-09-13):检索策略列左对齐(主要识别信息),其余 11 列居中;
+ * 表头 whitespace-nowrap 防换行;行高 py-3 + 浅灰 hairline 分割线;
+ * 「默认」徽标(品牌蓝浅底)属于策略列,默认行仅中性浅灰底,不搞彩色行。 */
+const HEADER_CELL = "whitespace-nowrap px-3 py-2.5 font-medium";
+const BODY_CELL = "border-t border-hairline px-3 py-3";
+
 function MatrixTable({
   rows,
   categories,
@@ -91,17 +110,17 @@ function MatrixTable({
       <table className="w-full border-collapse text-left">
         <thead>
           <tr className="bg-surface-2 text-caption font-medium text-ink-2">
-            <th className="px-3 py-2 font-medium">检索策略</th>
+            <th className={HEADER_CELL}>检索策略</th>
             {categories.map((category) => (
-              <th key={category} className="px-3 py-2 font-medium">
-                {category}
+              <th key={category} className={`${HEADER_CELL} text-center`}>
+                {shortCategory(category)}
               </th>
             ))}
-            <th className="px-3 py-2 font-medium">Hit@5</th>
-            <th className="px-3 py-2 font-medium">MRR</th>
-            <th className="px-3 py-2 font-medium">Recall@K</th>
-            <th className="px-3 py-2 font-medium">Precision@K</th>
-            <th className="px-3 py-2 font-medium">平均延迟</th>
+            <th className={`${HEADER_CELL} text-center`}>Hit@5</th>
+            <th className={`${HEADER_CELL} text-center`}>MRR</th>
+            <th className={`${HEADER_CELL} text-center`}>Recall@K</th>
+            <th className={`${HEADER_CELL} text-center`}>Precision@K</th>
+            <th className={`${HEADER_CELL} text-center`}>平均延迟</th>
           </tr>
         </thead>
         <tbody className="text-body-sm text-ink">
@@ -114,10 +133,13 @@ function MatrixTable({
                 key={run.run_id}
                 className={isDefault ? "bg-surface-2" : "hover:bg-surface-2"}
               >
-                <th scope="row" className="px-3 py-2 font-medium text-ink">
+                <th
+                  scope="row"
+                  className={`${BODY_CELL} whitespace-nowrap font-medium text-ink`}
+                >
                   <span className="flex items-center gap-1.5">
                     {MODE_LABELS[run.mode] ?? run.mode}
-                    {isDefault ? <Badge variant="neutral">当前默认</Badge> : null}
+                    {isDefault ? <Badge variant="brand">默认</Badge> : null}
                   </span>
                 </th>
                 {categories.map((category) => {
@@ -129,20 +151,29 @@ function MatrixTable({
                     cell = `${inCategory.filter((e) => e.hit).length}/${inCategory.length}`;
                   }
                   return (
-                    <td key={category} className="px-3 py-2 text-numeric">
+                    <td
+                      key={category}
+                      className={`${BODY_CELL} text-center text-numeric`}
+                    >
                       {cell}
                     </td>
                   );
                 })}
-                <td className="px-3 py-2 text-numeric">
+                <td className={`${BODY_CELL} text-center text-numeric`}>
                   {metrics ? `${metrics.hit_at_5.hits}/${metrics.hit_at_5.total}` : "—"}
                 </td>
-                <td className="px-3 py-2 text-numeric">
+                <td className={`${BODY_CELL} text-center text-numeric`}>
                   {metrics ? metrics.mrr.toFixed(4) : "—"}
                 </td>
-                <td className="px-3 py-2 text-caption text-ink-3">{NO_DATA}</td>
-                <td className="px-3 py-2 text-caption text-ink-3">{NO_DATA}</td>
-                <td className="px-3 py-2 text-caption text-ink-3">{NO_DATA}</td>
+                <td className={`${BODY_CELL} whitespace-nowrap text-center text-caption text-ink-3`}>
+                  {NO_DATA}
+                </td>
+                <td className={`${BODY_CELL} whitespace-nowrap text-center text-caption text-ink-3`}>
+                  {NO_DATA}
+                </td>
+                <td className={`${BODY_CELL} whitespace-nowrap text-center text-caption text-ink-3`}>
+                  {NO_DATA}
+                </td>
               </tr>
             );
           })}

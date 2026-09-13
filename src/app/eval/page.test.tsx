@@ -211,14 +211,103 @@ describe("EvalPage 评测矩阵(动态数据源)", () => {
     // 未纳入评测引擎的指标:3 模式 × 3 指标显式「暂无数据」
     expect(within(table).getAllByText("暂无数据")).toHaveLength(9);
 
-    // 混合+重排默认行高亮 + 徽标
+    // 混合+重排默认行:中性浅灰底 + 品牌蓝「默认」徽标(归策略列,非指标列)
     const defaultRow = within(table).getByText(/混合\+重排/).closest("tr");
-    expect(defaultRow?.textContent).toContain("当前默认");
+    expect(defaultRow?.textContent).toContain("默认");
+    const defaultBadge = within(defaultRow!).getByText("默认");
+    expect(defaultBadge.className).toContain("bg-brand-50");
+    expect(defaultBadge.className).toContain("text-brand-600");
+    expect(defaultBadge.closest("th")?.getAttribute("scope")).toBe("row");
+    // 指标单元格内不出现「默认」,2/2|2/2… 严格对应各自指标列
+    within(defaultRow!)
+      .getAllByRole("cell")
+      .forEach((cell) => {
+        expect(cell.textContent).not.toContain("默认");
+      });
+
+    // 对齐:检索策略列左对齐,其余列表头与单元格全部居中
+    const headers = within(table).getAllByRole("columnheader");
+    expect(headers[0].textContent).toBe("检索策略");
+    expect(headers[0].className).not.toContain("text-center");
+    headers.slice(1).forEach((header) =>
+      expect(header.className).toContain("text-center"),
+    );
+    within(table)
+      .getAllByRole("row")
+      .slice(1)
+      .forEach((row) => {
+        within(row)
+          .getAllByRole("cell")
+          .forEach((cell) => {
+            expect(cell.className).toContain("text-center");
+          });
+      });
+
+    // 行高与分割线:body 单元格 py-3 + hairline 顶部分割线
+    const firstBodyCell = within(table)
+      .getAllByRole("row")[1]
+      .querySelector("td");
+    expect(firstBodyCell?.className).toContain("border-t");
+    expect(firstBodyCell?.className).toContain("py-3");
+
+    // 「暂无数据」:中性灰 + 居中,不用红/黄/紫
+    within(table)
+      .getAllByText("暂无数据")
+      .forEach((cell) => {
+        expect(cell.className).toContain("text-ink-3");
+        expect(cell.className).toContain("text-center");
+      });
 
     // 数据来源页脚可回溯(run_id + params_hash + doc_commit)
     expect(screen.getByText(/params_hash abc123def4567890/)).toBeTruthy();
     expect(screen.getByText(/doc_commit abc1234/)).toBeTruthy();
     expect(screen.getByText(/run run-vector-1/)).toBeTruthy();
+  });
+
+  it("场景列表头缩短:六类长类别名 → 紧凑表头,未知类别原样回退", async () => {
+    const longCategories = [
+      "精确关键词检索",
+      "语义检索",
+      "多文档问题",
+      "相似文档干扰",
+      "专业术语",
+      "文档冲突",
+    ];
+    const perCase = [
+      ...longCategories.map((category, index) => ({
+        ...PER_CASE[0],
+        case_id: `C0${index + 1}`,
+        category,
+      })),
+      { ...PER_CASE[2], case_id: "C07", category: "未知类别", in_metrics: true },
+    ];
+    stubRoutes({
+      GET_runs: () => Promise.resolve(jsonResponse({ runs: BATCH_ITEMS })),
+      GET_run: (id) => {
+        const summary =
+          BATCH_ITEMS.find((item) => item.run_id === id) ?? BATCH_ITEMS[0];
+        return Promise.resolve(jsonResponse({ ...summary, per_case: perCase }));
+      },
+    });
+    render(<EvalPage />);
+
+    // findBy 等待逐例明细加载完成(场景列来自明细,异步取数)
+    await screen.findByRole("columnheader", { name: "关键词" });
+    const table = screen.getByRole("table");
+    for (const short of ["语义", "多文档", "相似干扰", "术语", "冲突"]) {
+      expect(
+        within(table).getByRole("columnheader", { name: short }),
+      ).toBeTruthy();
+    }
+    // 长名不再出现在表头;未知类别原样回退显示
+    for (const long of longCategories) {
+      expect(
+        within(table).queryByRole("columnheader", { name: long }),
+      ).toBeNull();
+    }
+    expect(
+      within(table).getByRole("columnheader", { name: "未知类别" }),
+    ).toBeTruthy();
   });
 
   it("历史 CLI 批次(无逐例明细):仅总指标列 + 诚实说明,不虚构场景列", async () => {

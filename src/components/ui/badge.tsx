@@ -1,7 +1,8 @@
 import type { HTMLAttributes } from "react";
 
 /* 徽标:高度 22px、圆角 6px、12px 文字;方形,不用胶囊(DesignRules 胶囊白名单)。
-   语义固定:状态徽标(neutral/success/info/danger/warning)+ 检索模式徽标(mode-*),禁止换用。 */
+   语义固定:状态徽标(neutral/success/info/danger/warning)+ 检索模式徽标(mode-*)
+   + 默认标记(brand = 品牌蓝浅底 + 蓝字,同选中态口径;2026-09-13 评测矩阵「默认」),禁止换用。 */
 
 export type BadgeVariant =
   | "neutral"
@@ -9,6 +10,7 @@ export type BadgeVariant =
   | "info"
   | "danger"
   | "warning"
+  | "brand"
   | "mode-keyword"
   | "mode-vector"
   | "mode-hybrid";
@@ -19,6 +21,7 @@ const badgeClasses: Record<BadgeVariant, string> = {
   info: "bg-info-bg text-info",
   danger: "bg-danger-bg text-danger-text",
   warning: "bg-warning-bg text-warning",
+  brand: "bg-brand-50 text-brand-600",
   "mode-keyword": "bg-mode-keyword-bg text-mode-keyword",
   "mode-vector": "bg-mode-vector-bg text-mode-vector",
   "mode-hybrid": "bg-mode-hybrid-bg text-mode-hybrid",
