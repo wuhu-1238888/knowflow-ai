@@ -9,7 +9,9 @@ import type { DocumentInfo } from "@/lib/rag";
 /* 文档表格(DesignRules 文档库页):标题/格式/状态/分块数/上传时间/操作;
    table token 直用(table-container/header-cell/cell/row-hover);
    重建索引与删除均为 ghost icon 按钮(人显式触发,禁止自动);
-   上传中 = 表格内乐观行(待索引徽标 + 解析中说明,无全局遮罩)。 */
+   上传中 = 表格内乐观行(待索引徽标 + 解析中说明,无全局遮罩)。
+   列对齐(2026-09-13 人拍板):标题左对齐(主要识别信息),格式/状态/分块数/
+   上传时间/操作五列表头与内容统一居中——列级规则,不对单行写样式。 */
 
 export interface UploadingRow {
   name: string;
@@ -27,7 +29,9 @@ export interface DocumentTableProps {
 
 const HEADER_CELL =
   "bg-surface-2 px-3 py-2.5 text-caption font-medium text-ink-2";
+const HEADER_CELL_CENTER = `${HEADER_CELL} text-center`;
 const BODY_CELL = "border-t border-hairline px-3 py-3 text-body-sm";
+const BODY_CELL_CENTER = `${BODY_CELL} text-center`;
 
 export function DocumentTable({
   docs,
@@ -44,11 +48,11 @@ export function DocumentTable({
           <thead>
             <tr>
               <th className={HEADER_CELL}>文档标题</th>
-              <th className={HEADER_CELL}>格式</th>
-              <th className={HEADER_CELL}>状态</th>
-              <th className={`${HEADER_CELL} text-right`}>分块数</th>
-              <th className={HEADER_CELL}>上传时间</th>
-              <th className={`${HEADER_CELL} text-right`}>操作</th>
+              <th className={HEADER_CELL_CENTER}>格式</th>
+              <th className={HEADER_CELL_CENTER}>状态</th>
+              <th className={HEADER_CELL_CENTER}>分块数</th>
+              <th className={HEADER_CELL_CENTER}>上传时间</th>
+              <th className={HEADER_CELL_CENTER}>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -62,16 +66,16 @@ export function DocumentTable({
                     上传解析中…
                   </span>
                 </td>
-                <td className={`${BODY_CELL} border-t-0`}>
+                <td className={`${BODY_CELL_CENTER} border-t-0`}>
                   <DocFormatBadge fileType={uploading.format} />
                 </td>
-                <td className={`${BODY_CELL} border-t-0`}>
+                <td className={`${BODY_CELL_CENTER} border-t-0`}>
                   <DocStatusBadge status="pending" />
                 </td>
-                <td className={`${BODY_CELL} border-t-0 text-right text-ink-3`}>
+                <td className={`${BODY_CELL_CENTER} border-t-0 text-ink-3`}>
                   —
                 </td>
-                <td className={`${BODY_CELL} border-t-0 text-ink-3`}>—</td>
+                <td className={`${BODY_CELL_CENTER} border-t-0 text-ink-3`}>—</td>
                 <td className={`${BODY_CELL} border-t-0`} />
               </tr>
             ) : null}
@@ -101,20 +105,20 @@ export function DocumentTable({
                       </span>
                     ) : null}
                   </td>
-                  <td className={BODY_CELL}>
+                  <td className={BODY_CELL_CENTER}>
                     <DocFormatBadge fileType={doc.file_type} />
                   </td>
-                  <td className={BODY_CELL}>
+                  <td className={BODY_CELL_CENTER}>
                     <DocStatusBadge status={doc.status} lastError={doc.last_error} />
                   </td>
-                  <td className={`${BODY_CELL} text-right text-numeric`}>
+                  <td className={`${BODY_CELL_CENTER} text-numeric`}>
                     {doc.chunk_count}
                   </td>
-                  <td className={`${BODY_CELL} text-ink-2`}>
+                  <td className={`${BODY_CELL_CENTER} text-ink-2`}>
                     {formatUploadDate(doc.uploaded_at)}
                   </td>
-                  <td className={BODY_CELL}>
-                    <div className="flex justify-end gap-1">
+                  <td className={BODY_CELL_CENTER}>
+                    <div className="flex justify-center gap-1">
                       <Button
                         variant="icon"
                         size="icon"
