@@ -69,7 +69,8 @@ def test_list_documents_pagination_and_chunk_count(tmp_path, monkeypatch):
     by_id = {item["id"]: item for item in body["items"]}
     assert set(by_id) == {"doc-a", "doc-b"}
     assert set(by_id["doc-a"]) == {
-        "id", "title", "file_type", "status", "uploaded_at", "synthetic", "chunk_count",
+        "id", "title", "file_type", "status", "uploaded_at", "synthetic",
+        "last_error", "chunk_count",
     }
     assert "source_path" not in by_id["doc-a"]  # 内部路径不出响应
     assert by_id["doc-a"]["chunk_count"] == 2
@@ -123,7 +124,69 @@ def test_ingest_parse_failure_keeps_failed_row(tmp_path, monkeypatch):
     docs = repo.list_documents()
     assert len(docs) == 1
     assert docs[0]["status"] == "failed"  # 行保留,表格可重试
+    assert docs[0]["last_error"].startswith("解析失败")  # 失败原因留存
     assert docs[0]["source_path"].startswith(str(tmp_path / "uploads"))
+
+
+def test_ingest_index_failure_marks_failed_with_last_error(tmp_path, monkeypatch):
+    """索引段异常(模型加载/LanceDB 写入)不再卡 parsing:500 + failed + 原因留存。"""
+    client, repo, index, service = make_client(tmp_path, monkeypatch)
+
+    def boom(doc_id, text):
+        raise RuntimeError("模拟索引写入失败")
+
+    monkeypatch.setattr(index, "index_document", boom)
+    resp = upload(client, "travel.md", DOC_MD.encode("utf-8"))
+    assert resp.status_code == 500
+    assert "索引失败" in resp.json()["detail"]
+    doc = repo.list_documents()[0]
+    assert doc["status"] == "failed"
+    assert doc["last_error"] == "索引失败: RuntimeError"
+
+
+def test_ingest_oversized_file_400(tmp_path, monkeypatch):
+    client, repo, index, service = make_client(tmp_path, monkeypatch)
+    resp = upload(client, "big.md", b"x" * (10 * 1024 * 1024 + 1))
+    assert resp.status_code == 400
+    assert "文件过大" in resp.json()["detail"]
+    assert repo.list_documents() == []
+
+
+def test_document_detail_returns_meta_preview_and_chunks(tmp_path, monkeypatch):
+    client, repo, index, service = make_client(tmp_path, monkeypatch)
+    text = "# 差旅报销制度\n\n出差住宿每晚报销上限 500 元。\n\n## 市内交通\n\n每天报销上限 100 元。\n"
+    doc_id = upload(client, "travel.md", text.encode("utf-8")).json()["doc_id"]
+    resp = client.get(f"/api/documents/{doc_id}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert set(body) == {
+        "id", "title", "file_type", "status", "uploaded_at", "synthetic",
+        "last_error", "chunk_count", "preview", "chunks",
+    }
+    assert body["id"] == doc_id and body["title"] == "差旅报销制度"
+    assert body["status"] == "indexed" and body["last_error"] is None
+    assert body["chunk_count"] == len(body["chunks"]) >= 1
+    assert "出差住宿每晚报销上限 500 元" in body["preview"]
+    # chunks 按原文顺序(id = doc_id-序号),text 为分块原文
+    assert [c["order"] for c in body["chunks"]] == list(range(len(body["chunks"])))
+    assert all(c["id"].startswith(f"{doc_id}-") for c in body["chunks"])
+    assert any("报销" in c["text"] for c in body["chunks"])
+
+
+def test_document_detail_unknown_404(tmp_path, monkeypatch):
+    client, repo, index, service = make_client(tmp_path, monkeypatch)
+    assert client.get("/api/documents/doc-ghost").status_code == 404
+
+
+def test_document_detail_failed_row_shows_error_no_preview(tmp_path, monkeypatch):
+    client, repo, index, service = make_client(tmp_path, monkeypatch)
+    assert upload(client, "broken.md", "<!-- 仅注释 -->\n".encode("utf-8")).status_code == 422
+    doc = repo.list_documents()[0]
+    resp = client.get(f"/api/documents/{doc['id']}")
+    body = resp.json()
+    assert body["status"] == "failed"
+    assert body["last_error"].startswith("解析失败")
+    assert body["chunk_count"] == 0 and body["chunks"] == []
 
 
 def test_delete_document_removes_everywhere(tmp_path, monkeypatch):
@@ -162,6 +225,18 @@ def test_reindex_unknown_doc_404(tmp_path, monkeypatch):
     assert client.post("/api/documents/doc-ghost/reindex").status_code == 404
 
 
+def test_reindex_success_clears_last_error(tmp_path, monkeypatch):
+    client, repo, index, service = make_client(tmp_path, monkeypatch)
+    assert upload(client, "broken.md", "<!-- 仅注释 -->\n".encode("utf-8")).status_code == 422
+    doc = repo.list_documents()[0]
+    assert doc["status"] == "failed" and doc["last_error"]
+    saved = tmp_path / "uploads" / f"{doc['id']}.md"
+    saved.write_text("# 修复后的制度\n\n修复内容:报销上限 800 元。\n", encoding="utf-8")
+    assert client.post(f"/api/documents/{doc['id']}/reindex").status_code == 200
+    fixed = repo.get_document(doc["id"])
+    assert fixed["status"] == "indexed" and fixed["last_error"] is None
+
+
 def test_fr09_delete_stops_hits_and_reupload_restores(tmp_path, monkeypatch):
     client, repo, index, service = make_client(tmp_path, monkeypatch)
     text = "年会抽奖规则:一等奖三名,二等奖五名。"
@@ -176,3 +251,23 @@ def test_fr09_delete_stops_hits_and_reupload_restores(tmp_path, monkeypatch):
     new_id = upload(client, "raffle.md", text.encode("utf-8")).json()["doc_id"]
     hits = service.search("年会抽奖", mode="hybrid", top_k=5)
     assert any(h.doc_id == new_id for h in hits)
+
+
+def test_fr09_delete_stops_keyword_and_hybrid_hits_with_fts(tmp_path, monkeypatch):
+    """删除后全文倒排同样不再召回(FR-09 一致性补全,2026-09-13):
+    上传链路已建 FTS;显式 ensure 幂等;删除后 keyword 与 hybrid 两路均不命中。"""
+    client, repo, index, service = make_client(tmp_path, monkeypatch)
+    text = "年会抽奖规则:一等奖三名,二等奖五名。"
+    doc_id = upload(client, "raffle.md", text.encode("utf-8")).json()["doc_id"]
+    index.ensure_fts()  # 幂等:已存在则跳过 + optimize
+    # 前置:全文路真实命中(证明 keyword 路生效,非空跑)
+    keyword_hits = service.search("年会抽奖", mode="keyword", top_k=5)
+    assert any(h.doc_id == doc_id for h in keyword_hits)
+    hybrid_hits = service.search("年会抽奖", mode="hybrid", top_k=5)
+    assert any(h.doc_id == doc_id for h in hybrid_hits)
+    assert client.delete(f"/api/documents/{doc_id}").status_code == 200
+    # 删除后(含 FTS 倒排刷新):两路均不再召回已删文档
+    keyword_hits = service.search("年会抽奖", mode="keyword", top_k=5)
+    hybrid_hits = service.search("年会抽奖", mode="hybrid", top_k=5)
+    assert all(h.doc_id != doc_id for h in keyword_hits)
+    assert all(h.doc_id != doc_id for h in hybrid_hits)

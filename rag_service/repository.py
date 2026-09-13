@@ -40,19 +40,22 @@ class Repository:
         用 ON CONFLICT DO UPDATE 而非 INSERT OR REPLACE:后者内部先删父行再插入,
         在 foreign_keys=ON 下触发 chunks 级联删除(状态回写会清空已写 chunks)。
         """
+        doc = dict(doc)
+        doc.setdefault("last_error", None)  # 老调用方不带该字段(成功回写时清除)
         with self._conn() as conn:
             conn.execute(
                 """
                 INSERT INTO documents
-                  (id, title, file_type, status, uploaded_at, source_path, synthetic)
-                VALUES (:id, :title, :file_type, :status, :uploaded_at, :source_path, :synthetic)
+                  (id, title, file_type, status, uploaded_at, source_path, synthetic, last_error)
+                VALUES (:id, :title, :file_type, :status, :uploaded_at, :source_path, :synthetic, :last_error)
                 ON CONFLICT(id) DO UPDATE SET
                   title = excluded.title,
                   file_type = excluded.file_type,
                   status = excluded.status,
                   uploaded_at = excluded.uploaded_at,
                   source_path = excluded.source_path,
-                  synthetic = excluded.synthetic
+                  synthetic = excluded.synthetic,
+                  last_error = excluded.last_error
                 """,
                 doc,
             )
@@ -230,12 +233,14 @@ class Repository:
             )
 
     def set_feedback(self, qa_id: str, rating: str, created_at: str) -> None:
-        """反馈 upsert:同一 QA 重复提交 = 覆盖(INSERT OR REPLACE,幂等)。"""
+        """反馈 upsert:同一 QA 重复提交 = 覆盖 rating;首评时间保留
+        (ON CONFLICT DO UPDATE 只更新 rating,不重写 created_at)。"""
         with self._conn() as conn:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO qa_feedback (qa_id, rating, created_at)
+                INSERT INTO qa_feedback (qa_id, rating, created_at)
                 VALUES (:qa_id, :rating, :created_at)
+                ON CONFLICT(qa_id) DO UPDATE SET rating = excluded.rating
                 """,
                 {"qa_id": qa_id, "rating": rating, "created_at": created_at},
             )

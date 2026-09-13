@@ -5,7 +5,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET as getDocuments } from "@/app/api/documents/route";
-import { DELETE as deleteDocumentRoute } from "@/app/api/documents/[id]/route";
+import {
+  DELETE as deleteDocumentRoute,
+  GET as getDocumentRoute,
+} from "@/app/api/documents/[id]/route";
 import { POST as postReindex } from "@/app/api/documents/[id]/reindex/route";
 import { GET as getEvalRunRoute } from "@/app/api/eval/runs/[id]/route";
 import { POST as postAsk } from "@/app/api/ask/route";
@@ -15,6 +18,7 @@ import {
   ApiError,
   askQuestion,
   deleteDocument,
+  getDocument,
   getEvalRun,
   getFeedback,
   listDocuments,
@@ -359,6 +363,20 @@ describe("文档管理 BFF 路由(3.3.3)", () => {
     expect(url).toBe(`${RAG_BASE_URL}/api/documents/doc-1/reindex`);
     expect(init.method).toBe("POST");
   });
+
+  it("GET /api/documents/:id 转发带 id(详情,2026-09-13 闭环优化)", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({ ...DOC_ITEM, last_error: null, preview: "预览", chunks: [] }),
+    );
+    const response = await getDocumentRoute(
+      new Request("http://localhost:3001/api/documents/doc-1"),
+      { params: Promise.resolve({ id: "doc-1" }) },
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = mock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${RAG_BASE_URL}/api/documents/doc-1`);
+    expect(init.method).toBe("GET");
+  });
 });
 
 describe("typed client 文档管理(3.3.3)", () => {
@@ -436,6 +454,30 @@ describe("typed client 文档管理(3.3.3)", () => {
       name: "ApiError",
       status: 500,
       message: "源文件不存在",
+    });
+  });
+
+  it("getDocument:GET /api/documents/:id 解析详情(preview + chunks);404 → ApiError", async () => {
+    const mock = stubFetch(async () =>
+      jsonResponse({
+        ...DOC_ITEM,
+        last_error: null,
+        preview: "# 年假制度\n年假每年 10 天。",
+        chunks: [{ id: "doc-1-0", order: 0, text: "# 年假制度\n年假每年 10 天。" }],
+      }),
+    );
+    const detail = await getDocument("doc-1");
+    expect(detail.preview).toContain("年假制度");
+    expect(detail.chunks).toHaveLength(1);
+    expect(detail.chunks[0].id).toBe("doc-1-0");
+    expect(detail.last_error).toBeNull();
+    expect(mock).toHaveBeenCalledWith("/api/documents/doc-1");
+
+    stubFetch(async () => jsonResponse({ error: "文档不存在" }, 404));
+    await expect(getDocument("ghost")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+      message: "文档不存在",
     });
   });
 });

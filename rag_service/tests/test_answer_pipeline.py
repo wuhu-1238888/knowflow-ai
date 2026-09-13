@@ -73,6 +73,7 @@ def test_refuse_below_tau_vector():
     assert result.answer is None
     assert result.citations == []
     assert result.confidence == pytest.approx(0.57)
+    assert result.relevant_hits == 1  # 低分命中拒答 = 信息不足(非完全无依据)
 
 
 def test_answer_at_or_above_tau_vector():
@@ -89,6 +90,7 @@ def test_refuse_empty_hits():
     result = pipeline.answer("问题", [], mode="hybrid_rerank")
     assert result.no_answer is True
     assert result.confidence == 0.0
+    assert result.relevant_hits == 0  # 完全无依据
     assert pipeline._provider.calls == 0  # 未触发生成
 
 
@@ -292,6 +294,7 @@ def test_schema_failure_retries_then_refuses():
     assert provider.calls == 2
     assert result.no_answer is True
     assert result.answer is None
+    assert result.relevant_hits == 1  # 检索有命中但无法形成可靠回答 → 信息不足
 
 
 def test_schema_retry_then_success():

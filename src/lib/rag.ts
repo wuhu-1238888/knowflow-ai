@@ -9,13 +9,6 @@ import { NextResponse } from "next/server";
 export const RAG_BASE_URL = "http://127.0.0.1:8000";
 export const RAG_TIMEOUT_MS = 120_000;
 
-/** 拒答阈值(与后端 answer_pipeline.py TAU_* 对齐;改动须人拍板并同步两侧)。 */
-export const TAU_BY_MODE: Record<string, number> = {
-  vector: 0.58,
-  hybrid: 0.58,
-  hybrid_rerank: 0.3,
-};
-
 export class ApiError extends Error {
   readonly status: number;
 
@@ -116,6 +109,11 @@ export interface AskResponse {
   conflicts: ConflictItem[] | null;
   mode: string;
   elapsed_ms: number;
+  /** 拒答两态(2026-09-13 闭环优化):no_evidence = 完全无依据;
+      insufficient = 检索到低分相关内容但不足以确定答案。可选字段兼容旧夹具。 */
+  refusal_reason?: "no_evidence" | "insufficient" | null;
+  /** 拒答时检索到的命中数(insufficient 时 > 0)。 */
+  relevant_hits?: number;
 }
 
 export type FeedbackRating = "useful" | "useless";
@@ -194,6 +192,23 @@ export interface DocumentInfo {
   uploaded_at: string;
   synthetic: number;
   chunk_count: number;
+  /** 失败原因留存(2026-09-13):解析失败:/索引失败: 前缀;成功为 null。 */
+  last_error?: string | null;
+}
+
+/** 文档详情 chunk(分块原文,按 chunk_order 排序)。 */
+export interface DocumentChunkInfo {
+  id: string;
+  order: number;
+  text: string;
+}
+
+/** 文档详情(GET /api/documents/:id;基本信息 + 内容预览 + chunks 列表)。 */
+export interface DocumentDetail extends DocumentInfo {
+  last_error: string | null;
+  /** 源文件解析后的前 2000 字;解析失败/文件缺失为 null(chunks 兜底)。 */
+  preview: string | null;
+  chunks: DocumentChunkInfo[];
 }
 
 export interface DocumentListResponse {
@@ -246,6 +261,22 @@ export async function uploadDocument(file: File): Promise<IngestResponse> {
     );
   }
   return body as IngestResponse;
+}
+
+/** 文档详情(GET /api/documents/:id;2026-09-13 闭环优化,详情页与来源抽屉定位)。 */
+export async function getDocument(id: string): Promise<DocumentDetail> {
+  const response = await fetch(`/api/documents/${encodeURIComponent(id)}`);
+  const body = (await response.json().catch(() => null)) as
+    | DocumentDetail
+    | { error?: string }
+    | null;
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      (body as { error?: string } | null)?.error ?? "文档详情加载失败,请稍后重试",
+    );
+  }
+  return body as DocumentDetail;
 }
 
 /** 删除文档(DELETE /api/documents/:id;FR-09 人显式触发,前端走二次确认模态)。 */

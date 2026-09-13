@@ -177,3 +177,37 @@ def test_qa_log_roundtrip_and_limit(repo):
     assert logs[0]["citations_json"] == '["doc-hr-05"]'
     assert logs[0]["conflicts_json"] == '{"doc_a": "doc-hr-03", "doc_b": "doc-hr-04"}'
     assert logs[1]["conflicts_json"] is None  # 无冲突行保持 NULL
+
+
+# ── 2026-09-13 闭环优化:last_error 留存 / 反馈首评时间保留 ──
+
+def test_document_last_error_roundtrip_and_default(repo):
+    """老调用方不带 last_error → 默认 NULL;失败回写留存、成功回写清除。"""
+    repo.upsert_document(FIXED_DOC)
+    assert repo.get_document("doc-hr-05")["last_error"] is None
+    repo.upsert_document({**FIXED_DOC, "status": "failed", "last_error": "解析失败: 空文档"})
+    assert repo.get_document("doc-hr-05")["last_error"] == "解析失败: 空文档"
+    repo.upsert_document({**FIXED_DOC, "status": "indexed"})
+    assert repo.get_document("doc-hr-05")["last_error"] is None
+
+
+def test_feedback_upsert_preserves_first_created_at(repo):
+    """重复提交覆盖 rating,但保留首次反馈时间(修复 INSERT OR REPLACE 重写时间)。"""
+    repo.add_qa_log(
+        {
+            "id": "qa-1", "query": "问题", "answer": "答案",
+            "citations_json": "[]", "conflicts_json": None,
+            "no_answer": 0, "mode": "hybrid_rerank", "created_at": "2026-09-10T10:00:00+00:00",
+        }
+    )
+    repo.set_feedback("qa-1", "useful", "2026-09-10T10:00:00+00:00")
+    repo.set_feedback("qa-1", "useless", "2026-09-11T10:00:00+00:00")
+    assert repo.get_feedback("qa-1") == "useless"
+    from rag_service.db import get_connection
+
+    conn = get_connection(repo._db_path)
+    row = conn.execute(
+        "SELECT created_at FROM qa_feedback WHERE qa_id = 'qa-1'"
+    ).fetchone()
+    conn.close()
+    assert row[0] == "2026-09-10T10:00:00+00:00"  # 首评时间未被覆盖

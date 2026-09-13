@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS documents (
     CHECK (status IN ('parsing', 'indexed', 'failed')),
   uploaded_at TEXT NOT NULL,
   source_path TEXT NOT NULL,
-  synthetic INTEGER NOT NULL DEFAULT 1
+  synthetic INTEGER NOT NULL DEFAULT 1,
+  last_error TEXT
 );
 
 CREATE TABLE IF NOT EXISTS chunks (
@@ -96,6 +97,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "conflicts_json" not in qa_cols:
         # 3.4.3 审计补全:冲突结构化结果落库(老行保持 NULL,语义不变)
         conn.execute("ALTER TABLE qa_logs ADD COLUMN conflicts_json TEXT")
+    doc_cols = {row[1] for row in conn.execute("PRAGMA table_info(documents)")}
+    if "last_error" not in doc_cols:
+        # 2026-09-13 闭环优化:失败原因留存(解析失败/索引失败区分与详情页展示)
+        conn.execute("ALTER TABLE documents ADD COLUMN last_error TEXT")
 
 
 def init_db(db_path: Path | None = None, lancedb_dir: Path | None = None) -> Path:

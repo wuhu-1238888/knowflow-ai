@@ -41,6 +41,10 @@ class FeedbackRequest(BaseModel):
     rating: Literal["useful", "useless"]
 
 
+PREVIEW_CHARS = 2000  # 文档详情内容预览截断(详情页展示用,非全文)
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 上传大小上限(全量读内存前先拦截,防 OOM)
+
+
 def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=None) -> FastAPI:
     app = FastAPI(title="KnowFlow AI RAG Service", version="0.1.0")
     state = {
@@ -149,6 +153,12 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
             "conflicts": result.conflicts,
             "mode": req.mode,
             "elapsed_ms": elapsed_ms,
+            # 拒答两态(2026-09-13 闭环优化):0 命中 = 无依据;低分命中 = 信息不足
+            "refusal_reason": (
+                "insufficient" if result.no_answer and result.relevant_hits > 0
+                else "no_evidence" if result.no_answer else None
+            ),
+            "relevant_hits": result.relevant_hits,
         }
 
     @app.post("/api/qa/{qa_id}/feedback")
@@ -176,6 +186,14 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         if doc is not None:
             _repo().upsert_document({**doc, "status": status})
 
+    def _set_failed(doc_id: str, error: str) -> None:
+        """失败回写:状态 failed + 失败原因留存(徽标区分解析/索引失败、详情页展示)。"""
+        doc = _repo().get_document(doc_id)
+        if doc is not None:
+            _repo().upsert_document(
+                {**doc, "status": "failed", "last_error": error}
+            )
+
     def _chunk_rows(doc_id: str, text: str) -> list[dict]:
         """与 LanceIndex.index_document 同源分块,镜像落元数据库 chunks 表。"""
         return [
@@ -190,16 +208,23 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         ]
 
     def _parse_and_index(doc_id: str, filename: str, content: bytes) -> tuple[str, int]:
-        """解析 → 分块 → 索引 → chunks 落库;失败抛 422(调用方负责 failed 回写)。
+        """解析 → 分块 → 索引 → chunks 落库;失败抛 422/500(调用方负责 failed 回写)。
 
-        返回 (标题, chunk 数)。
+        返回 (标题, chunk 数)。解析段异常 → 422「解析失败:」;索引段异常
+        (模型加载/LanceDB 写入等)→ 500「索引失败:」,调用方以 detail 留存
+        last_error(2026-09-13 闭环优化:修复非解析异常卡 parsing 的死锁)。
         """
         try:
             result = parse_file(filename, content)
         except (ParsingError, EmptyTextError) as exc:
             raise HTTPException(status_code=422, detail=f"解析失败: {exc}") from exc
-        count = _index().index_document(doc_id, result.text)
-        _index().ensure_fts()  # 增量行编入全文倒排(hybrid 检索依赖)
+        try:
+            count = _index().index_document(doc_id, result.text)
+            _index().ensure_fts()  # 增量行编入全文倒排(hybrid 检索依赖)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500, detail=f"索引失败: {type(exc).__name__}"
+            ) from exc
         repo = _repo()
         repo.delete_chunks(doc_id)
         repo.add_chunks(_chunk_rows(doc_id, result.text))
@@ -222,12 +247,48 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         items = [
             {
                 key: doc[key]
-                for key in ("id", "title", "file_type", "status", "uploaded_at", "synthetic")
+                for key in (
+                    "id", "title", "file_type", "status", "uploaded_at",
+                    "synthetic", "last_error",
+                )
             }
             | {"chunk_count": repo.count_chunks(doc["id"])}
             for doc in docs[start : start + page_size]
         ]
         return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+    @app.get("/api/documents/{doc_id}")
+    def get_document_detail(doc_id: str) -> dict:
+        """文档详情(2026-09-13 闭环优化):基本信息 + 内容预览 + chunks 列表,
+        供文档库详情页与「在文档库中查看」定位;预览失败不阻塞详情(chunks 兜底)。"""
+        repo = _repo()
+        doc = repo.get_document(doc_id)
+        if doc is None:
+            raise HTTPException(status_code=404, detail="文档不存在")
+        chunks = [
+            {"id": c["id"], "order": c["chunk_order"], "text": c["text"]}
+            for c in repo.list_chunks(doc_id)
+        ]
+        preview = None
+        src = Path(doc["source_path"])
+        if src.is_file():
+            try:
+                parsed = parse_file(src.name, src.read_bytes())
+                preview = parsed.text[:PREVIEW_CHARS]
+            except (OSError, ParsingError, EmptyTextError):
+                preview = None  # 解析失败/文件损坏:详情页显示「暂无预览」
+        return {
+            "id": doc["id"],
+            "title": doc["title"],
+            "file_type": doc["file_type"],
+            "status": doc["status"],
+            "uploaded_at": doc["uploaded_at"],
+            "synthetic": doc["synthetic"],
+            "last_error": doc.get("last_error"),
+            "chunk_count": len(chunks),
+            "preview": preview,
+            "chunks": chunks,
+        }
 
     @app.post("/api/ingest")
     def ingest(file: UploadFile = File(...)) -> dict:
@@ -246,6 +307,10 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         content = file.file.read()
         if not content.strip():
             raise HTTPException(status_code=400, detail="文件为空,拒绝上传")
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=400, detail="文件过大(上限 10MB),请精简后再上传"
+            )
         doc_id = new_id("doc-")
         uploads = get_uploads_dir()
         uploads.mkdir(parents=True, exist_ok=True)
@@ -265,10 +330,17 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         )
         try:
             title, count = _parse_and_index(doc_id, filename, content)
-        except HTTPException:
-            _set_status(doc_id, "failed")
+        except HTTPException as exc:
+            _set_failed(doc_id, exc.detail)
             raise
-        repo.upsert_document({**repo.get_document(doc_id), "title": title, "status": "indexed"})
+        repo.upsert_document(
+            {
+                **repo.get_document(doc_id),
+                "title": title,
+                "status": "indexed",
+                "last_error": None,
+            }
+        )
         return {
             "doc_id": doc_id,
             "title": title,
@@ -306,20 +378,22 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
             raise HTTPException(status_code=404, detail="文档不存在")
         src = Path(doc["source_path"])
         if not src.is_file():
-            _set_status(doc_id, "failed")
+            _set_failed(doc_id, "源文件不存在,无法重建索引")
             raise HTTPException(status_code=500, detail="源文件不存在,无法重建索引")
         try:
             content = src.read_bytes()
         except OSError as exc:
-            _set_status(doc_id, "failed")
+            _set_failed(doc_id, f"源文件读取失败: {exc}")
             raise HTTPException(status_code=500, detail=f"源文件读取失败: {exc}") from exc
         _set_status(doc_id, "parsing")
         try:
             title, count = _parse_and_index(doc_id, src.name, content)
-        except HTTPException:
-            _set_status(doc_id, "failed")
+        except HTTPException as exc:
+            _set_failed(doc_id, exc.detail)
             raise
-        repo.upsert_document({**doc, "title": title, "status": "indexed"})
+        repo.upsert_document(
+            {**doc, "title": title, "status": "indexed", "last_error": None}
+        )
         return {
             "doc_id": doc_id,
             "title": title,

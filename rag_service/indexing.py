@@ -151,9 +151,12 @@ class LanceIndex:
         return len(rows)
 
     def delete_document(self, doc_id: str) -> None:
-        """删除该文档全部向量行(幂等);元数据删除由 Repository 负责。"""
+        """删除该文档全部向量行(幂等);元数据删除由 Repository 负责。
+        删除后 optimize:压缩墓碑并刷新 FTS 倒排,防已删行经全文路召回
+        (2026-09-13 闭环优化,FR-09 补全文检索一致性)。"""
         table = self._ensure_table()
         table.delete(f"doc_id = '{_quote(doc_id)}'")
+        table.optimize()
 
     def count_chunks(self, doc_id: str | None = None) -> int:
         table = self._ensure_table()

@@ -126,6 +126,9 @@ class AnswerResult:
     no_answer: bool
     confidence: float
     conflicts: list[dict] | None  # [{doc_a, doc_b, quote_a, quote_b}]
+    # 拒答时检索到的命中数(2026-09-13 闭环优化):0 = 完全无依据;
+    # >0 = 有相关内容但低于阈值 → API 层映射为 refusal_reason=insufficient
+    relevant_hits: int = 0
 
 
 class AnswerPipeline:
@@ -138,6 +141,7 @@ class AnswerPipeline:
             return AnswerResult(
                 answer=None, citations=[], no_answer=True,
                 confidence=confidence, conflicts=None,
+                relevant_hits=len(hits),
             )
         context = build_context(hits)
         draft, failure = self._generate(query, context)
@@ -152,6 +156,7 @@ class AnswerPipeline:
             return AnswerResult(
                 answer=None, citations=[], no_answer=True,
                 confidence=confidence, conflicts=None,
+                relevant_hits=len(hits),
             )
         citations = self._map_citations(draft, hits, mode)
         return AnswerResult(

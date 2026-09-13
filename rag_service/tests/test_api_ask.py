@@ -63,6 +63,7 @@ def test_ask_success_full_schema(tmp_path):
     assert body["confidence"] == 0.83
     assert body["conflicts"] is None
     assert body["mode"] == "hybrid_rerank"
+    assert body["refusal_reason"] is None and body["relevant_hits"] == 0
     assert isinstance(body["elapsed_ms"], int)
     # qa_id 随响应返回(FR-12 反馈关联),与 QA 日志 id 一致
     assert body["qa_id"].startswith("qa-")
@@ -181,7 +182,33 @@ def test_ask_empty_index_refuses(tmp_path):
     assert body["answer"] is None
     assert body["citations"] == []
     assert body["confidence"] == 0.0
+    # 拒答两态:0 命中 = 完全无依据
+    assert body["refusal_reason"] == "no_evidence" and body["relevant_hits"] == 0
     # 拒答也落 QA 日志
+    logs = repo.list_qa_logs()
+    assert len(logs) == 1 and logs[0]["no_answer"] == 1
+
+
+def test_ask_low_confidence_refuses_with_insufficient_reason(tmp_path):
+    """低分命中拒答:refusal_reason=insufficient + relevant_hits=命中数(不强行生成)。"""
+    weak = SearchHit(
+        chunk_id="doc-x-0",
+        doc_id="doc-x",
+        text="相关内容片段。",
+        score=0.02,
+        source="hybrid",
+        rerank_score=0.05,
+        vec_score=0.2,
+    )
+    client, repo = make_client(tmp_path, hits=[weak])
+    resp = client.post("/api/ask", json={"query": "问题", "mode": "hybrid_rerank"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["no_answer"] is True
+    assert body["answer"] is None
+    assert body["citations"] == []
+    assert body["refusal_reason"] == "insufficient"
+    assert body["relevant_hits"] == 1
     logs = repo.list_qa_logs()
     assert len(logs) == 1 and logs[0]["no_answer"] == 1
 
