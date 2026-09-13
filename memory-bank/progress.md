@@ -1,10 +1,10 @@
 # 开发进度(Progress)
 
-> 版本:v0.1 | 最后更新:2026-09-09
+> 版本:v0.1 | 最后更新:2026-09-13
 > 对应:执行期持续维护(执行日志)
 
 <!-- 头部:测试基线,随任务更新 -->
-- 测试基线:后端 pytest 181/181 + 前端 vitest 133/133(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏 + 3.3.2 全量交互补齐 + 3.3.3 文档库页 + 3.3.4 评测页全量 + 3.3.5 关于页 + 3.4.2 三模式对比评测报告后全绿,2026-09-10)
+- 测试基线:后端 pytest 198/198 + 前端 vitest 183/183(M3 首批任务 + 检索策略产品决策 + 页面容器加宽 + 问答页垂直节奏 + 3.3.2 全量交互补齐 + 3.3.3 文档库页 + 3.3.4 评测页全量 + 3.3.5 关于页 + 3.4.2 三模式对比评测报告 + 3.6.2 核心功能闭环优化后全绿,2026-09-13)
 
 ## Round 1:Stage 01–08 文档阶段完成表
 
@@ -345,6 +345,39 @@
 **验证备注(dev 缓存坑,后续任务参考)**:改完类名后编译 CSS 曾残留死规则(aria-pressed:text-brand-800)——根因 = Tailwind 开发态扫描 .next 里陈旧 HMR 热更新 chunk(内含历史类名字符串)+ 内存候选缓存不随删除失效。处置:杀 dev server → 清空 .next → 重启后死规则归零。今后凡「源码已改但编译产物仍含旧类名」,先查 `grep -r <类名> .next`,命中即按此流程处理。
 
 **待人浏览器走查**:首次回答/引用/来源卡/重新生成/复制/有用/无用/最新/混合/冲突/拒答/错误 12 态观感 + 1280/1440/1920 与 375px。
+
+## 3.6.2 核心功能闭环优化(2026-09-13,机器侧完成;规格 30 节,人验收待走查)
+
+**背景**:人下达 30 节规格「核心功能闭环优化」——先检查现有实现、只补缺失/有问题部分;核心闭环 = 上传→解析→Chunk→索引→检索→回答→引用→查看原文→反馈→评测。执行原则:不重复实现已正确工作功能;禁大规模重构/换栈/重做 DB/重写 RAG/Agent/MCP/RBAC/OCR/多模态/改四页结构/再换品牌色。
+
+**现状判断(规格第一节交付)**:已完成 = 上传→索引链路、FR-09 删除一致性(SQLite+LanceDB 双删)、真实重索引、冲突检测 2/2、完全无依据拒答、Citation/Evidence Trust、反馈/复制/重新生成全状态、真实 Eval 运行与逐例明细、全落盘持久化、无策略切换;部分完成 = 处理状态(死锁 bug+无失败原因)、原文查看(无引用定位+假链接)、拒答(无信息不足变体)、删除 FTS(未验证)、eval 历史视觉层级、全局交互(active/tooltip/静默成功/重试);缺失 = 文档详情、会话历史、信息不足变体;存在问题 = feedback 时间戳、无上传上限、跨库无事务、doc_commit 只锁代码、synthetic 文档可删、死代码(TAU_BY_MODE/ui-input)、BFF 陈旧注释。
+
+**P0 交付(后端)**:
+
+- 处理状态死锁修复:非 HTTP 异常包装为 500「索引失败: {type}」,`_set_failed` 落 `last_error`(documents 表轻量 `_migrate` ALTER 列)→ parsing 卡死行可重试;解析失败/索引失败前缀驱动徽标细分。
+- 上传大小上限 10MB(400「文件过大(上限 10MB),请精简后再上传」,防 OOM)。
+- 删除后 FTS 一致性:`delete_document` 增 `table.optimize()`(FR-09 补全文检索一致性,新测试证明删除后 keyword/hybrid 两路均不再命中)。
+- 拒答两态:`AnswerResult.relevant_hits`;`/api/ask` 返回 `refusal_reason`(no_evidence=依据 0 条 / insufficient=有低分相关命中)+ `relevant_hits`。
+- 反馈 upsert 保留首次 `created_at`(`ON CONFLICT(qa_id) DO UPDATE SET rating`)。
+- 新端点 `GET /api/documents/{doc_id}`:基本信息 + `preview`(源文件前 2000 字)+ `chunks`(id/order/text);404「文档不存在」。
+- pytest **198/198**(+10:last_error 往返/索引失败标记/超大文件 400/详情端点 3 例/FR-09 FTS 双路/拒答 relevant_hits 等)。
+
+**P0 交付(前端)**:
+
+- 拒答卡两态变体:insufficient → 「找到相关信息,但不足以确定答案」+「找到相关信息 N 条,置信度不足」(不强行生成);no_evidence 保持「依据 0 条」。
+- 来源抽屉:引用句在原文中 mark 高亮(quote 非原文子串时优雅回退整段无高亮)+「回答引用的片段已在原文中高亮」说明;「在文档库中查看」由列表页伪链接 → `/documents/{doc_id}` 真实定位(Answer→Citation→Chunk→原文链)。
+- 文档列表标题 → 详情页 Link;状态徽标细分「解析失败/索引失败」+ last_error 悬浮提示。
+- 新页面 文档详情 `/documents/[id]`:基本信息(格式/上传时间/状态+失败原因/分块数)+ 内容预览 + 分块内容列表(Chunk 顺序/ID/标题提取或首行摘要,不暴露底层技术字段);404「文档不存在或已被删除」;失败重试;骨架加载。
+
+**P1 交付**:会话历史「最近问过」(仅当前会话内存快照、上限 6 条、upsert 覆盖、点击回看纯状态恢复不发新请求);评测运行历史视觉层级(第一眼 = 策略/状态/时间/核心指标,run_id/params/commit 降级第二层 caption);button 全 variant :active(surface-3/danger-dark 新 token);TopBar icon tooltip;文档库删除/重建索引成功提示(role=status,3s 自动消失)+ 列表失败原地重试;theme.css `--animate-spin` token + keyframes(白名单注释更新);清理 3 处 BFF 陈旧注释;删除死代码 ui/input.tsx。
+
+**P2:文档版本意识 → Future Enhancement(不重构 DB)**:documents 表不新增 version/effective_date/status 版本字段(MVP 数据模型定位为「演示知识库快照」,版本语义由文件名/上传时间承载);冲突检测已通过 LLM 对比双方原文(2024/2026 版本)呈现,不经数据库版本字段。**Future Enhancement**:若企业知识库需要正式版本管理(版本比较/回滚/生效日期),在 documents 表加 `version/effective_date` 列 + 版本维度检索过滤,届时另行立项。
+
+**生命周期一致性测试(规格 6 条)全部自动化覆盖**:① 上传→检索(test_api_ask/test_api_documents ingest 后 ask 命中);② 删除→不引用(test_fr09_delete_stops_keyword_and_hybrid_hits_with_fts);③ 重索引→新内容可检索(test_api_documents reindex 全量覆盖 + 状态回写);④ 冲突识别(test_api_ask conflicts 2/2);⑤ 完全无相关→拒答(test_ask_empty_index_refuses);⑥ Citation→Source→Chunk→原文(detail 端点 chunks 契约 + 前端抽屉定位/高亮测试)。
+
+**验证(机器侧)**:后端 pytest 198/198;前端 vitest 183/183(+15:详情页 7、拒答变体 1、抽屉定位/高亮 3、会话历史 4、列表重试 1 等);typecheck 干净;SSR 四页 + 详情页 200;人工验收步骤见 docs/qa-guide-3.6.2.md。
+
+**待人浏览器走查**:文档详情页(正常/failed/404)、来源抽屉引用高亮与详情页定位、拒答两态、「最近问过」回看、文档库成功提示与重试、评测历史层级(见 docs/qa-guide-3.6.2.md)。
 
 ## 修订
 
