@@ -7,9 +7,25 @@ import { statusMeta } from "@/components/ask/source-meta";
 
 export type DocStatus = "parsing" | "indexed" | "failed" | "pending";
 
-export function DocStatusBadge({ status }: { status: DocStatus }) {
+export interface DocStatusBadgeProps {
+  status: DocStatus;
+  /** 失败原因(2026-09-13 闭环优化):区分「解析失败/索引失败」,
+      并作为 badge 悬浮提示(不把技术细节铺在表格里)。 */
+  lastError?: string | null;
+}
+
+export function DocStatusBadge({ status, lastError }: DocStatusBadgeProps) {
   const meta = statusMeta(status);
-  return <Badge variant={meta.variant}>{meta.label}</Badge>;
+  /* failed 细分:后端失败原因以「解析失败:/索引失败:」前缀落库。 */
+  const failedLabel =
+    status === "failed" && lastError?.startsWith("索引失败")
+      ? "索引失败"
+      : meta.label;
+  return (
+    <Badge variant={meta.variant} title={lastError ?? undefined}>
+      {failedLabel}
+    </Badge>
+  );
 }
 
 /** 文档格式徽标:file_type → 大写文本徽标(neutral 语义,与状态徽标区分)。 */

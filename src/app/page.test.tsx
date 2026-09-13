@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AskPage from "@/app/page";
@@ -397,6 +397,124 @@ describe("AskPage 重新生成与回答版本管理(FR-11,3.4.4)", () => {
   });
 });
 
+describe("AskPage 会话历史「最近问过」(2026-09-13,规格 9)", () => {
+  function historyItems() {
+    const section = screen.getByRole("region", { name: "最近问过" });
+    return {
+      section,
+      buttons: within(section).getAllByRole("button"),
+    };
+  }
+
+  it("提问后出现「最近问过」;点历史条目回看已存回答(不发新请求)", async () => {
+    const impl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(
+        jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-other", answer: "另一问题的回答[1]。" }),
+      );
+    const fetchMock = stubFetchWithFeedback(impl);
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    expect(historyItems().buttons).toHaveLength(1);
+
+    const input = screen.getByLabelText("提问内容") as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: "报销上限?" } });
+    fireEvent.click(screen.getByRole("button", { name: "提问" }));
+    await screen.findByText(/另一问题的回答/);
+
+    // 两条历史,最近的在最前
+    const buttons = historyItems().buttons;
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].textContent).toBe("报销上限?");
+
+    // 点击第一条之外的旧条目 → 回看已存回答,不新增 /api/ask 请求
+    const askCount = askCalls(fetchMock).length;
+    fireEvent.click(buttons[1]);
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    expect(screen.queryByText(/另一问题的回答/)).toBeNull();
+    expect(askCalls(fetchMock)).toHaveLength(askCount);
+    // 回看后该条目呈选中态
+    expect(
+      (historyItems().buttons[1] as HTMLButtonElement).getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+  });
+
+  it("重新生成后同一问题仅一条历史(最新版本覆盖,不重复堆条目)", async () => {
+    const impl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(
+        jsonResponse({ ...ANSWER_RESPONSE, qa_id: "qa-v2", answer: "第二版回答[1]。" }),
+      );
+    stubFetchWithFeedback(impl);
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+    await screen.findByText(/第二版回答/);
+
+    const buttons = historyItems().buttons;
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].textContent).toBe("年假有几天?");
+  });
+
+  it("拒答同样进入历史;点击回看恢复拒答卡(与回答条目互不串)", async () => {
+    const impl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ANSWER_RESPONSE))
+      .mockResolvedValueOnce(jsonResponse(REFUSE_RESPONSE));
+    stubFetchWithFeedback(impl);
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
+    await screen.findByText(/入职第一年享有 8 天 年假/);
+    const input = screen.getByLabelText("提问内容") as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: "公司有宠物寄养福利吗?" } });
+    fireEvent.click(screen.getByRole("button", { name: "提问" }));
+    await screen.findByText("知识库中未找到答案");
+
+    const buttons = historyItems().buttons;
+    expect(buttons).toHaveLength(2);
+    // 回看第一问 → 恢复回答卡
+    fireEvent.click(buttons[1]);
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    expect(screen.queryByText("知识库中未找到答案")).toBeNull();
+    // 回看拒答条目 → 恢复拒答卡
+    fireEvent.click(historyItems().buttons[0]);
+    expect(screen.getByText("知识库中未找到答案")).toBeTruthy();
+    expect(screen.queryByText(/入职第一年享有 8 天 年假/)).toBeNull();
+  });
+
+  it("历史上限 6 条:第 7 问挤掉最早一条,最近的在最前", async () => {
+    const impl = vi.fn();
+    for (let i = 1; i <= 7; i += 1) {
+      impl.mockResolvedValueOnce(
+        jsonResponse({ ...ANSWER_RESPONSE, qa_id: `qa-h${i}`, answer: `回答 ${i}[1]` }),
+      );
+    }
+    stubFetchWithFeedback(impl);
+    render(<AskPage />);
+
+    const input = screen.getByLabelText("提问内容") as HTMLTextAreaElement;
+    for (let i = 1; i <= 7; i += 1) {
+      fireEvent.change(input, { target: { value: `问题 ${i}` } });
+      fireEvent.click(screen.getByRole("button", { name: "提问" }));
+      await screen.findByText(new RegExp(`回答 ${i}`));
+    }
+
+    const buttons = historyItems().buttons;
+    expect(buttons).toHaveLength(6);
+    expect(buttons[0].textContent).toBe("问题 7");
+    expect(buttons[5].textContent).toBe("问题 2");
+  });
+});
+
 describe("AskPage 拒答 / 冲突 / 失败", () => {
   it("拒答渲染拒答卡:依据 0 条,无工程调试值(分数/阈值)", async () => {
     stubFetch(async () => jsonResponse(REFUSE_RESPONSE));
@@ -408,6 +526,24 @@ describe("AskPage 拒答 / 冲突 / 失败", () => {
     expect(screen.getByText(/联系知识库管理员/)).toBeTruthy();
     expect(screen.queryByText(/最高相关度/)).toBeNull();
     expect(screen.queryByText(/阈值/)).toBeNull();
+  });
+
+  it("拒答两态(2026-09-13):insufficient 渲染「找到相关信息」变体与条数,不显示「依据 0 条」", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        ...REFUSE_RESPONSE,
+        refusal_reason: "insufficient",
+        relevant_hits: 3,
+      }),
+    );
+    render(<AskPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "公司有宠物寄养福利吗?" }));
+    expect(await screen.findByText("找到相关信息,但不足以确定答案")).toBeTruthy();
+    expect(screen.getByText("找到相关信息 3 条,置信度不足")).toBeTruthy();
+    expect(screen.queryByText("依据 0 条")).toBeNull();
+    // 不强行生成:仍是拒答卡,无「AI 回答」正文
+    expect(screen.queryByText("AI 回答")).toBeNull();
   });
 
   it("conflicts 非空:回答卡内 Trust 提示默认收起,点击展开冲突来源(3.4.5)", async () => {

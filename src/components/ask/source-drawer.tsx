@@ -38,6 +38,11 @@ export function SourceDrawer({ citation, onClose }: SourceDrawerProps) {
   const source = sourceMeta(citation.source);
   const status = statusMeta(citation.doc_status);
   const uploadedAt = formatUploadDate(citation.doc_uploaded_at);
+  /* 引用句视觉定位(2026-09-13 闭环优化):quote 规则侧保证为 chunk 原文子串,
+     在完整原文中高亮首次出现位置(Answer → Citation → Chunk → 原文)。 */
+  const quoteAt = citation.text.indexOf(citation.quote);
+  const quoteHighlighted =
+    citation.quote.length > 0 && quoteAt !== -1;
 
   return (
     <div className="fixed inset-0 z-50">
@@ -75,6 +80,7 @@ export function SourceDrawer({ citation, onClose }: SourceDrawerProps) {
           </div>
           <button
             type="button"
+            title="关闭"
             aria-label="关闭来源抽屉"
             onClick={onClose}
             className="inline-flex size-8 shrink-0 items-center justify-center rounded-sm text-ink-2 transition-colors duration-150 hover:bg-surface-2"
@@ -83,14 +89,30 @@ export function SourceDrawer({ citation, onClose }: SourceDrawerProps) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4">
+          {quoteHighlighted ? (
+            <p className="mb-2 text-caption text-ink-3">
+              回答引用的片段已在原文中高亮
+            </p>
+          ) : null}
           <p className="whitespace-pre-line text-body-lg text-ink">
-            {citation.text}
+            {quoteHighlighted ? (
+              <>
+                {citation.text.slice(0, quoteAt)}
+                <mark className="rounded-sm bg-brand-50 px-0.5 text-ink">
+                  {citation.quote}
+                </mark>
+                {citation.text.slice(quoteAt + citation.quote.length)}
+              </>
+            ) : (
+              citation.text
+            )}
           </p>
           <div className="mt-3 flex items-center gap-2 border-t border-hairline pt-3">
             <Badge variant={source.variant}>{source.label}</Badge>
           </div>
+          {/* 2026-09-13 闭环优化:真实定位到该文档详情页(原为列表页伪链接) */}
           <Link
-            href="/documents"
+            href={`/documents/${encodeURIComponent(citation.doc_id)}`}
             className="mt-3 inline-block text-body-sm text-brand-800 transition-colors duration-150 hover:underline"
           >
             在文档库中查看

@@ -40,7 +40,20 @@ export default function DocumentsPage() {
   const [deletePending, setDeletePending] = useState(false);
   const [reindexing, setReindexing] = useState<string[]>([]);
   const [reindexErrors, setReindexErrors] = useState<Record<string, string>>({});
+  /* 操作成功提示(2026-09-13 闭环优化):删除/重建索引不再是静默成功,3 秒自动消失 */
+  const [notice, setNotice] = useState<{
+    kind: "deleted" | "reindexed";
+    title: string;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const load = useCallback(async () => {
     setListError(null);
@@ -90,6 +103,7 @@ export default function DocumentsPage() {
     setDeleteError(null);
     try {
       await deleteDocument(deleteTarget.id);
+      setNotice({ kind: "deleted", title: deleteTarget.title });
       setDeleteTarget(null);
       await load();
     } catch (error) {
@@ -108,6 +122,7 @@ export default function DocumentsPage() {
     });
     try {
       await reindexDocument(doc.id);
+      setNotice({ kind: "reindexed", title: doc.title });
       await load();
     } catch (error) {
       setReindexErrors((prev) => ({
@@ -144,6 +159,14 @@ export default function DocumentsPage() {
         />
       </PageHeader>
 
+      {notice ? (
+        <p role="status" className="mt-4 text-body-sm text-success-text">
+          {notice.kind === "deleted"
+            ? `已删除「${notice.title}」,该文档不再参与检索`
+            : `已重建索引:${notice.title}`}
+        </p>
+      ) : null}
+
       <div className="mt-6">
         <UploadZone
           onBrowse={() => inputRef.current?.click()}
@@ -156,9 +179,15 @@ export default function DocumentsPage() {
       <div className="mt-8">
         {docs === null ? (
           listError ? (
-            <p role="alert" className="text-body-sm text-danger-text">
-              {listError}
-            </p>
+            <div className="flex flex-col items-start gap-3">
+              <p role="alert" className="text-body-sm text-danger-text">
+                {listError}
+              </p>
+              {/* 2026-09-13 闭环优化:列表加载失败可原地重试(原为纯提示) */}
+              <Button variant="secondary" onClick={() => void load()}>
+                重试
+              </Button>
+            </div>
           ) : (
             <div className="space-y-2" aria-label="加载中">
               <div className="h-10 animate-skeleton rounded-md bg-surface-2" />

@@ -20,6 +20,7 @@ export function TopBar({ pathname }: { pathname: string }) {
         </div>
         <Button
           variant="icon"
+          title="打开导航菜单"
           aria-label="打开导航菜单"
           onClick={() => setOpen(true)}
         >
@@ -43,6 +44,7 @@ export function TopBar({ pathname }: { pathname: string }) {
               </div>
               <Button
                 variant="icon"
+                title="关闭导航菜单"
                 aria-label="关闭导航菜单"
                 onClick={() => setOpen(false)}
               >

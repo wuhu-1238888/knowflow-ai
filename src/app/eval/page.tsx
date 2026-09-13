@@ -229,17 +229,16 @@ function RunRow({
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left transition-colors duration-150 hover:bg-surface-2"
+        className="flex w-full flex-col gap-0.5 px-4 py-3 text-left transition-colors duration-150 hover:bg-surface-2"
       >
-        <span className="min-w-44 text-body-sm font-medium text-ink">
-          {MODE_LABELS[run.mode] ?? run.mode}
-        </span>
-        <StatusBadge status={run.status} />
-        <span className="text-caption text-ink-2">{formatEvalTime(run.created_at)}</span>
-        <span className="text-caption text-ink-3">
-          params {run.params_hash.slice(0, 8)} · commit {run.doc_commit || "—"}
-        </span>
-        <span className="ml-auto flex items-center gap-3">
+        {/* 视觉层级(2026-09-13 闭环优化):第一眼 = 策略/状态/时间/核心指标;
+           run_id/params/commit 降级为第二层弱化 caption */}
+        <span className="flex w-full flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="min-w-44 text-body-sm font-medium text-ink">
+            {MODE_LABELS[run.mode] ?? run.mode}
+          </span>
+          <StatusBadge status={run.status} />
+          <span className="text-caption text-ink-2">{formatEvalTime(run.created_at)}</span>
           {run.status === "completed" ? (
             <span className="text-body-sm text-numeric">
               {metrics
@@ -253,9 +252,13 @@ function RunRow({
           ) : (
             <span className="text-body-sm text-ink-3">计算中…</span>
           )}
-          <span className="w-10 text-right text-body-sm text-brand-600">
+          <span className="ml-auto w-10 text-right text-body-sm text-brand-600">
             {expanded ? "收起" : "展开"}
           </span>
+        </span>
+        <span className="text-caption text-ink-3">
+          {run.run_id} · params {run.params_hash.slice(0, 8)} · commit{" "}
+          {run.doc_commit || "—"}
         </span>
       </button>
       {expanded ? (

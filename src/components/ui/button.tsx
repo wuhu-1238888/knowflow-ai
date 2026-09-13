@@ -9,12 +9,12 @@ const variantClasses: Record<Variant, string> = {
   primary:
     "bg-brand-600 text-ink-inverse hover:bg-brand-700 active:bg-brand-800 disabled:bg-surface-2 disabled:text-ink-disabled",
   secondary:
-    "border border-hairline-strong bg-surface text-ink hover:bg-surface-2 disabled:text-ink-disabled",
+    "border border-hairline-strong bg-surface text-ink hover:bg-surface-2 active:bg-surface-3 disabled:text-ink-disabled",
   ghost:
-    "bg-transparent text-ink-2 hover:bg-surface-2 disabled:text-ink-disabled",
+    "bg-transparent text-ink-2 hover:bg-surface-2 active:bg-surface-3 disabled:text-ink-disabled",
   danger:
-    "bg-danger text-ink-inverse hover:bg-danger/90 disabled:bg-surface-2 disabled:text-ink-disabled",
-  icon: "bg-transparent text-ink-2 hover:bg-surface-2 disabled:text-ink-disabled",
+    "bg-danger text-ink-inverse hover:bg-danger/90 active:bg-danger-dark disabled:bg-surface-2 disabled:text-ink-disabled",
+  icon: "bg-transparent text-ink-2 hover:bg-surface-2 active:bg-surface-3 disabled:text-ink-disabled",
 };
 
 const sizeClasses: Record<"md" | "icon", string> = {

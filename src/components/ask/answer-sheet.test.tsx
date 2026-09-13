@@ -21,7 +21,7 @@ const CITATION: Citation = {
   doc_id: "doc-1",
   chunk_id: "doc-1#0",
   quote: "入职第一年年假为 8 天,第二年起每年增加 1 天。",
-  text: "入职第一年年假为 8 天,第二年起每年增加 1 天,上限 15 天。",
+  text: "入职第一年年假为 8 天,第二年起每年增加 1 天。上限 15 天。",
   source: "hybrid",
   score: 0.83,
   doc_title: "员工手册",
@@ -172,17 +172,52 @@ describe("来源抽屉", () => {
     expect(within(dialog).getByText("md")).toBeTruthy();
     expect(within(dialog).getByText("已索引")).toBeTruthy();
     expect(within(dialog).getByText("上传于 2026-09-01")).toBeTruthy();
-    // 完整 chunk 原文(与引用片段不同,验证 text 富字段落位)
+    // 完整 chunk 原文富字段落位;引用句(quote 为 text 前缀)在原文中 mark 高亮,
+    // 其余部分照常展示(2026-09-13:Answer → Citation → Chunk → 原文视觉定位)
     expect(
-      within(dialog).getByText(
-        "入职第一年年假为 8 天,第二年起每年增加 1 天,上限 15 天。",
-      ),
+      within(dialog).getByText("回答引用的片段已在原文中高亮"),
     ).toBeTruthy();
+    const quoteMark = within(dialog).getByText(
+      "入职第一年年假为 8 天,第二年起每年增加 1 天。",
+    );
+    expect(quoteMark.tagName).toBe("MARK");
+    // 高亮片段之外的原文为裸文本节点,以段落 textContent 断言完整性
+    const body = within(dialog).getByText(
+      (_, el) =>
+        el?.tagName === "P" && el.classList.contains("whitespace-pre-line"),
+    );
+    expect(body?.textContent).toContain("上限 15 天。");
     // 二轮收蓝:相关度不进普通用户视图
     expect(within(dialog).queryByText(/相关度/)).toBeNull();
     expect(within(dialog).getByText("在文档库中查看")).toBeTruthy();
+    // 2026-09-13 闭环优化:链接直达文档详情页(原为列表页伪链接)
+    expect(
+      within(dialog)
+        .getByRole("link", { name: "在文档库中查看" })
+        .getAttribute("href"),
+    ).toBe("/documents/doc-1");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("引用句位于原文中部时,仅高亮对应片段,其余原文完整呈现(2026-09-13)", () => {
+    const citation: Citation = {
+      ...CITATION,
+      quote: "第二年起每年增加 1 天",
+    };
+    render(<AnswerSheet answer="答案正文" citations={[citation]} />);
+    fireEvent.click(screen.getByRole("button", { name: "查看原文" }));
+    const dialog = screen.getByRole("dialog", { name: "来源 [1]:员工手册" });
+    const mark = within(dialog).getByText("第二年起每年增加 1 天");
+    expect(mark.tagName).toBe("MARK");
+    // 高亮片段前后文本完整保留(裸文本节点,以段落 textContent 断言)
+    const body = within(dialog).getByText(
+      (_, el) =>
+        el?.tagName === "P" && el.classList.contains("whitespace-pre-line"),
+    );
+    expect(body?.textContent).toBe(
+      "入职第一年年假为 8 天,第二年起每年增加 1 天。上限 15 天。",
+    );
   });
 
   it("点引用 chip 同样滑出对应来源抽屉", () => {

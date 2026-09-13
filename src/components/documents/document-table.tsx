@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { IconRefresh, IconTrash } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { DocFormatBadge, DocStatusBadge } from "@/components/documents/doc-status-badge";
@@ -82,12 +84,14 @@ export function DocumentTable({
                   className="transition-colors duration-150 hover:bg-surface-2"
                 >
                   <td className={BODY_CELL}>
-                    <span
-                      className="block max-w-[320px] truncate font-medium text-ink"
+                    {/* 2026-09-13 闭环优化:标题直达文档详情页(原为纯文本) */}
+                    <Link
+                      href={`/documents/${encodeURIComponent(doc.id)}`}
+                      className="block max-w-[320px] truncate font-medium text-ink transition-colors duration-150 hover:text-brand-600"
                       title={doc.title}
                     >
                       {doc.title}
-                    </span>
+                    </Link>
                     {rowError ? (
                       <span
                         role="alert"
@@ -101,7 +105,7 @@ export function DocumentTable({
                     <DocFormatBadge fileType={doc.file_type} />
                   </td>
                   <td className={BODY_CELL}>
-                    <DocStatusBadge status={doc.status} />
+                    <DocStatusBadge status={doc.status} lastError={doc.last_error} />
                   </td>
                   <td className={`${BODY_CELL} text-right text-numeric`}>
                     {doc.chunk_count}

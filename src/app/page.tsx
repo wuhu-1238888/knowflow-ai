@@ -7,6 +7,7 @@ import { AskTextarea } from "@/components/ask/ask-textarea";
 import { ErrorCallout } from "@/components/ask/error-callout";
 import { NoAnswerCallout } from "@/components/ask/no-answer-callout";
 import { PreviousAnswer, type AnswerVersion } from "@/components/ask/previous-answer";
+import { RecentQuestions, type HistoryEntry } from "@/components/ask/recent-questions";
 import { QuestionChip } from "@/components/ask/question-chip";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -31,6 +32,9 @@ const EXAMPLE_QUESTIONS = [
   { query: "公司有宠物寄养福利吗?", hint: "知识库无答案 → 拒答(评测集 C11)" },
 ];
 
+/* 会话历史上限(2026-09-13 闭环优化,规格 9):仅当前会话,最近的在最前。 */
+const HISTORY_LIMIT = 6;
+
 export default function AskPage() {
   const [query, setQuery] = useState("");
   const [phase, setPhase] = useState<"idle" | "asking" | "regenerating">("idle");
@@ -40,6 +44,28 @@ export default function AskPage() {
   const [sameNotice, setSameNotice] = useState(false);
   const [lastQuery, setLastQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  /* 会话历史 upsert:同问题覆盖为最新快照,最近的在最前,上限 6 条 */
+  const pushHistory = (entry: HistoryEntry) => {
+    setHistory((prev) =>
+      [entry, ...prev.filter((item) => item.query !== entry.query)].slice(
+        0,
+        HISTORY_LIMIT,
+      ),
+    );
+  };
+
+  /* 回看历史:纯状态恢复(不发新请求),结果区还原当时的回答/拒答/上一版 */
+  const showHistory = (entry: HistoryEntry) => {
+    setQuery(entry.query);
+    setLastQuery(entry.query);
+    setLatest(entry.latest);
+    setPrevious(entry.previous);
+    setRefusal(entry.refusal);
+    setSameNotice(entry.sameNotice);
+    setError(null);
+  };
 
   async function submit(question: string, regenerate = false) {
     const trimmed = question.trim();
@@ -65,23 +91,45 @@ export default function AskPage() {
         setRefusal(result);
         setPrevious(regeneratedVersion);
         setLatest(null);
+        pushHistory({
+          query: trimmed,
+          latest: null,
+          previous: regeneratedVersion,
+          refusal: result,
+          sameNotice: false,
+        });
         return;
       }
       if (regeneratedVersion && regeneratedVersion.answer === result.answer) {
         // 真实重新生成但内容一致:明确告知,不复制旧卡片伪装新结果
         setSameNotice(true);
+        pushHistory({
+          query: trimmed,
+          latest,
+          previous,
+          refusal,
+          sameNotice: true,
+        });
         return;
       }
-      setPrevious(regeneratedVersion);
-      setLatest({
+      const nextVersion: AnswerVersion = {
         qa_id: result.qa_id,
         answer: result.answer as string,
         citations: result.citations,
         conflicts: result.conflicts,
         version: (regeneratedVersion ? regeneratedVersion.version : 0) + 1,
         createdAt: new Date(),
-      });
+      };
+      setPrevious(regeneratedVersion);
+      setLatest(nextVersion);
       setRefusal(null);
+      pushHistory({
+        query: trimmed,
+        latest: nextVersion,
+        previous: regeneratedVersion,
+        refusal: null,
+        sameNotice: false,
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "请求失败,请稍后重试");
     } finally {
@@ -151,7 +199,10 @@ export default function AskPage() {
 
       {refusal ? (
         <div className="flex flex-col gap-3">
-          <NoAnswerCallout />
+          <NoAnswerCallout
+            reason={refusal.refusal_reason ?? "no_evidence"}
+            relevantHits={refusal.relevant_hits ?? 0}
+          />
           {previous ? <PreviousAnswer version={previous} /> : null}
         </div>
       ) : latest ? (
@@ -170,6 +221,16 @@ export default function AskPage() {
             onRegenerate={() => void submit(lastQuery, true)}
           />
           {previous ? <PreviousAnswer version={previous} /> : null}
+        </div>
+      ) : null}
+
+      {history.length > 0 ? (
+        <div className="border-t border-hairline pt-4">
+          <RecentQuestions
+            items={history}
+            activeQuery={lastQuery}
+            onSelect={showHistory}
+          />
         </div>
       ) : null}
     </div>

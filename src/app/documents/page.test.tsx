@@ -146,12 +146,20 @@ describe("DocumentsPage 列表", () => {
     expect(screen.getByText(/拖入或选择文档上传/)).toBeTruthy();
   });
 
-  it("列表加载失败呈现错误提示", async () => {
+  it("列表加载失败:错误提示 + 重试按钮,点击重试恢复表格(2026-09-13)", async () => {
+    const getMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: "数据库错误" }, 500))
+      .mockResolvedValueOnce(jsonResponse(DOCS_RESPONSE));
     stubRoutes({
-      GET_documents: () => Promise.resolve(jsonResponse({ error: "数据库错误" }, 500)),
+      GET_documents: () => getMock(),
     });
     render(<DocumentsPage />);
     expect(await screen.findByRole("alert")).toHaveTextContent("数据库错误");
+
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
+    expect(await screen.findByText("员工手册.md")).toBeTruthy();
+    expect(getMock).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -308,11 +316,14 @@ describe("DocumentsPage 删除(FR-09)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(deleteMock).not.toHaveBeenCalled();
 
-    // 确认删除 → DELETE + 刷新
+    // 确认删除 → DELETE + 刷新 + 成功提示(2026-09-13:不再静默成功)
     fireEvent.click(screen.getByRole("button", { name: "删除:员工手册.md" }));
     fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(deleteMock).toHaveBeenCalledWith("doc-1");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "已删除「员工手册.md」,该文档不再参与检索",
+    );
     await waitFor(() => expect(screen.queryByText("员工手册.md")).toBeNull());
     expect(await screen.findByText("扫描件.pdf")).toBeTruthy();
     expect(screen.getByText("共 1 篇文档")).toBeTruthy();
@@ -413,6 +424,10 @@ describe("DocumentsPage 重建索引", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "重建索引:扫描件.pdf" }));
     await waitFor(() => expect(reindexMock).toHaveBeenCalledWith("doc-2"));
+    // 成功提示(2026-09-13:不再静默成功)
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "已重建索引:扫描件.pdf",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "重建索引:扫描件.pdf" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("源文件不存在");
