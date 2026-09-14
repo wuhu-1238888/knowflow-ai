@@ -82,4 +82,23 @@ describe("AppShell(按路由分档内容容器宽度,DesignSystem containers)", 
       "max-w-[760px]",
     );
   });
+
+  it("滚动模型(2026-09-14 人规格):侧栏 fixed 固定于视口左侧,内容列 lg:pl-56 让位", () => {
+    currentPathname.value = "/";
+    const { container } = render(
+      <AppShell>
+        <p>内容</p>
+      </AppShell>,
+    );
+    const aside = container.querySelector("aside");
+    expect(aside?.className).toContain("fixed");
+    expect(aside?.className).toContain("inset-y-0");
+    expect(aside?.className).toContain("left-0");
+    // 侧栏内容超高时仅内部滚动(小视口高度可用性)
+    expect(aside?.className).toContain("overflow-y-auto");
+    // 主内容列让位 224px,与固定侧栏不重叠、无横向溢出
+    const column = aside?.nextElementSibling;
+    expect(column?.className).toContain("lg:pl-56");
+    expect(column?.className).toContain("min-w-0");
+  });
 });

@@ -42,11 +42,14 @@ export function BrandMark({ size = 18 }: { size?: number }) {
   );
 }
 
-/* 侧栏:224px 白底 + 右侧发丝线,≥1024px 显示(DesignSystem 布局解剖)。 */
+/* 侧栏:224px 白底 + 右侧发丝线,≥1024px 显示(DesignSystem 布局解剖)。
+ * 2026-09-14 人规格:fixed 固定在视口左侧(主内容滚动时侧栏不动),
+ * 自身 overflow-y-auto——内容超高(小视口高度)时仅侧栏内部滚动,
+ * 不产生与主内容互相干扰的双滚动条。 */
 
 export function Sidebar({ pathname }: { pathname: string }) {
   return (
-    <aside className="hidden w-56 shrink-0 flex-col border-r border-hairline bg-surface lg:flex">
+    <aside className="fixed inset-y-0 left-0 hidden w-56 flex-col overflow-y-auto border-r border-hairline bg-surface lg:flex">
       <div className="flex h-16 items-center gap-2 px-4">
         <BrandMark />
         <Link
