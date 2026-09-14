@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmModal } from "@/components/documents/confirm-modal";
 import { DocumentTable } from "@/components/documents/document-table";
 import {
-  SUPPORTED_FORMATS,
   UploadZone,
   isSupportedFormat,
 } from "@/components/documents/upload-zone";
@@ -79,11 +78,9 @@ export default function DocumentsPage() {
   const handleFile = async (file: File) => {
     setUploadError(null);
     if (!isSupportedFormat(file.name)) {
-      const ext = file.name.includes(".")
-        ? file.name.split(".").pop()?.toLowerCase()
-        : "";
+      // 不支持的文件不进上传/解析流程(2026-09-14 人规格:错误文案固定)
       setUploadError(
-        `暂不支持${ext ? ` .${ext} ` : "该"}格式,支持 ${SUPPORTED_FORMATS.join(" ")}`,
+        "文件格式不支持,请选择 .md / .pdf / .docx / .html / .txt 文件",
       );
       return;
     }
@@ -179,6 +176,7 @@ export default function DocumentsPage() {
           onFile={(file) => void handleFile(file)}
           disabled={uploading !== null}
           error={uploadError}
+          uploadingName={uploading?.name ?? null}
         />
       </div>
 

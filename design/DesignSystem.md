@@ -157,7 +157,7 @@ components:
   conflict-panel:      { border: "1px solid {colors.warning-border}", backgroundColor: "{colors.surface}", rounded: "{rounded.lg}", padding: "{spacing.s6}" }
   conflict-badge:      { backgroundColor: "{colors.warning-bg}", textColor: "{colors.warning}", rounded: "{rounded.sm}", padding: "2px 8px", typography: "{typography.caption}" }
   conflict-card:       { backgroundColor: "{colors.surface}", border: "1px solid {colors.hairline}", rounded: "{rounded.lg}", padding: "{spacing.s4}", equalWidth: true }
-  upload-zone:         { backgroundColor: "{colors.surface}", border: "1px dashed {colors.hairline-strong}", rounded: "{rounded.lg}", padding: "{spacing.s8}", hover: { border: "1px dashed {colors.brand-600}", backgroundColor: "{colors.brand-50}" } }
+  upload-zone:         { backgroundColor: "{colors.surface}", border: "1px dashed {colors.hairline-strong}", rounded: "{rounded.lg}", padding: "{spacing.s8}", hover: { border: "1px dashed {colors.brand-600}", backgroundColor: "{colors.brand-50}" }, dragover: { border: "1px solid {colors.brand-600}", backgroundColor: "{colors.brand-50}" }, error: { border: "1px dashed {colors.danger}", backgroundColor: "{colors.danger-bg}" }, uploading: { border: "1px dashed {colors.hairline}", backgroundColor: "{colors.surface-2}" } }
   skeleton:            { backgroundColor: "{colors.surface-2}", rounded: "{rounded.sm}", animation: "opacity 1.6s ease-in-out infinite" }
   generating-pill:     { background: "{colors.ai-gradient}", textColor: "{colors.ink-inverse}", rounded: "{rounded.pill}", padding: "3px 10px", typography: "{typography.caption}", animation: "{motion.shimmer}" }
   question-chip:       { backgroundColor: "{colors.surface}", border: "1px solid {colors.hairline}", textColor: "{colors.ink-2}", typography: "{typography.body-sm}", rounded: "{rounded.sm}", padding: "5px 10px", height: 28 }
@@ -296,7 +296,7 @@ components:
 
 **7. 文档状态徽标(DocStatusBadge)**:已索引 = success · 解析中 = info · 解析失败 = danger · 待索引 = neutral。与 FR-01 状态机(parsing/indexed/failed)一一对应。
 
-**8. 上传区(UploadZone)**:发丝虚线框卡(圆角 10px、内边距 32px);文案「拖入或选择文档」+ 支持格式列表(mono:`.md .pdf .docx .html .txt`)+ caption「不支持 OCR,扫描件请先转文本」。拖拽悬停 = brand 虚线 + brand-50 底;上传中显示该文档行内进度(无全局遮罩)。
+**8. 上传区(UploadZone)**:发丝虚线框卡(圆角 10px、内边距 32px);信息层级 = 线性 Upload 图标(24px,中性灰)→ 主标题「拖入或选择文档」(16/600)→ 操作提示「点击选择文件,或将文件拖拽到此处」(body-sm ink-2)→ 支持格式「支持 .md / .pdf / .docx / .html / .txt」(body-sm,扩展名 mono)→ caption「不支持扫描件 OCR,请先将扫描件转换为文本」(2026-09-14 人规格五级层级)。状态:Default 中性灰虚线 + 白底;Hover 虚线变品牌蓝 + brand-50 浅蓝底 + 图标轻染蓝(仅 150ms 色彩过渡);Drag Over 品牌蓝实线 + brand-50 底 + 提示原位换「松开鼠标以上传」(不增行,无布局跳动;dragenter/dragleave 深度计数防抖动);Error danger 虚线 + danger-bg 底 + 卡内 role=alert 错误行;Uploading 标题换「正在上传 {name}…」+ 全通道禁用,无假进度动画(真实进度 = 表格乐观行)。键盘 Enter/Space 触发,焦点环走全局 :focus-visible。
 
 **9. 评测矩阵(EvalMatrix)**:行 = 三模式(向量 / 混合 / 混合+重排),列 = 7 类场景 + Hit@5 + MRR;所有数字 numeric token;「混合+重排」行 = surface-2 底 + 达标徽标(success「达标」/ neutral「记录值」),其余行仅显示数值并加 caption「仅混合+重排设达标线」;矩阵下方页脚 caption 标注数据来源:`数据来源 run-{run_id}.json · params_hash {前 8 位}`——诚信规则(只引用实测 run JSON)的视觉落点。
 

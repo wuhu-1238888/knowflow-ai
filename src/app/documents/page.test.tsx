@@ -214,6 +214,8 @@ describe("DocumentsPage 上传", () => {
     // 乐观行:表格行内进度,无全局遮罩;上传按钮禁用
     expect(await screen.findByText("上传解析中…")).toBeTruthy();
     expect(screen.getByText("待索引")).toBeTruthy();
+    // 上传区进入上传中状态:标题换「正在上传 {name}…」,无假进度(2026-09-14)
+    expect(screen.getByText("正在上传 新政策.md…")).toBeTruthy();
     expect(
       (screen.getByRole("button", { name: "上传文档" }) as HTMLButtonElement)
         .disabled,
@@ -240,8 +242,9 @@ describe("DocumentsPage 上传", () => {
     fireEvent.change(fileInputOf(container), {
       target: { files: [new File(["x"], "photo.png")] },
     });
+    // 2026-09-14 人规格:固定错误文案,错误行在卡内 role=alert(操作区附近)
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "暂不支持 .png 格式",
+      "文件格式不支持",
     );
     expect(fetchMock).toHaveBeenCalledTimes(1); // 仅初始 GET
   });
