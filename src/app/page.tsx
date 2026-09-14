@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { AnswerSheet } from "@/components/ask/answer-sheet";
+import { AnswerSkeleton } from "@/components/ask/answer-skeleton";
 import { AskTextarea } from "@/components/ask/ask-textarea";
 import { ErrorCallout } from "@/components/ask/error-callout";
 import { NoAnswerCallout } from "@/components/ask/no-answer-callout";
@@ -37,6 +38,10 @@ const EXAMPLE_QUESTIONS = [
 /* 会话历史上限(2026-09-13 闭环优化,规格 9):仅当前会话,最近的在最前。 */
 const HISTORY_LIMIT = 6;
 
+/* 等待文案两档(2026-09-14):20 秒内统一话术;之后切换「仍在处理中」+
+   真实已等待秒数(真实计时,不伪造阶段/百分比)。 */
+const LONG_WAIT_SECONDS = 20;
+
 export default function AskPage() {
   const [query, setQuery] = useState("");
   const [phase, setPhase] = useState<"idle" | "asking" | "regenerating">("idle");
@@ -47,6 +52,10 @@ export default function AskPage() {
   const [lastQuery, setLastQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  /* 等待时长(真实秒数,仅用于长等待话术);请求开始时重置。 */
+  const [elapsed, setElapsed] = useState(0);
+  /* 本会话首问(提交时无历史)→ 长等待时追加冷启动提示;绝不常显。 */
+  const coldStartRef = useRef(false);
 
   /* 返回上下文(2026-09-13):挂载时标记来源(供文档详情页返回判断)并恢复
      本标签页的会话快照(从「查看原文」返回时问答上下文不丢)。 */
@@ -82,6 +91,16 @@ export default function AskPage() {
     });
   }, [query, lastQuery, latest, previous, refusal, sameNotice, history]);
 
+  /* 等待计时:请求中每秒 +1(真实已等待秒数);回到 idle 清零。 */
+  useEffect(() => {
+    if (phase === "idle") {
+      setElapsed(0);
+      return;
+    }
+    const timer = setInterval(() => setElapsed((n) => n + 1), 1000);
+    return () => clearInterval(timer);
+  }, [phase]);
+
   /* 会话历史 upsert:同问题覆盖为最新快照,最近的在最前,上限 6 条 */
   const pushHistory = (entry: HistoryEntry) => {
     setHistory((prev) =>
@@ -111,6 +130,8 @@ export default function AskPage() {
     /* 版本语义:重新生成只对比被重生成的版本;新问题整体重置结果区。
        (setState 异步,闭包中的 latest 仍是点击时的值——用局部变量钉住。) */
     const regeneratedVersion = regenerate ? latest : null;
+    /* 本会话首问(尚无历史)= 可能触发后端冷启动(模型加载),仅供长等待话术使用 */
+    coldStartRef.current = !regenerate && history.length === 0;
     setPhase(regenerate ? "regenerating" : "asking");
     setError(null);
     setSameNotice(false);
@@ -167,7 +188,7 @@ export default function AskPage() {
         sameNotice: false,
       });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "请求失败,请稍后重试");
+      setError(err instanceof ApiError ? err.message : "回答生成失败,请稍后重试。");
     } finally {
       setPhase("idle");
     }
@@ -191,22 +212,38 @@ export default function AskPage() {
           <p className="text-caption text-ink-3">
             Enter 提问 · Shift+Enter 换行 · / 聚焦输入框
           </p>
-          <Button disabled={busy || !query.trim()} onClick={() => void submit(query)}>
-            提问
+          <Button
+            disabled={busy || !query.trim()}
+            loading={busy}
+            onClick={() => void submit(query)}
+          >
+            {busy ? "生成中…" : "提问"}
           </Button>
         </div>
       </div>
 
       {phase === "asking" ? (
-        <div className="flex flex-col items-start gap-2">
+        <div className="flex flex-col gap-3" aria-busy="true">
           {/* 「AI 生成中」胶囊:唯一 pill + 唯一 shimmer(白名单),仅首次提问使用;
-              重新生成的加载态在最新回答卡内(不伪造多阶段) */}
-          <span className="inline-flex animate-shimmer items-center gap-1.5 rounded-full bg-ai-gradient px-2.5 py-[3px] text-caption text-ink-inverse">
-            AI 生成中
-          </span>
-          <p className="text-body-sm text-ink-2">
-            正在检索企业知识库并生成回答,首次回答约需 1 分钟…
-          </p>
+              重新生成的加载态在最新回答卡内。后端无阶段状态 → 统一话术,
+              不伪造「检索→重排→生成」多阶段;20 秒后切「仍在处理中」+
+              真实已等待秒数(2026-09-14,绝不常显「约需 1 分钟」) */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex animate-shimmer items-center gap-1.5 rounded-full bg-ai-gradient px-2.5 py-[3px] text-caption text-ink-inverse">
+              AI 生成中
+            </span>
+            <p className="text-body-sm text-ink-2">
+              {elapsed >= LONG_WAIT_SECONDS
+                ? `仍在处理中,请稍候…已等待 ${elapsed} 秒`
+                : "正在检索企业知识库并生成回答…"}
+            </p>
+          </div>
+          {coldStartRef.current && elapsed >= LONG_WAIT_SECONDS ? (
+            <p className="-mt-1.5 text-caption text-ink-3">
+              首次回答可能需要更长时间,请稍候…
+            </p>
+          ) : null}
+          <AnswerSkeleton />
         </div>
       ) : null}
 

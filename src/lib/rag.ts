@@ -133,7 +133,7 @@ export async function askQuestion(
   if (!response.ok) {
     throw new ApiError(
       response.status,
-      (body as { error?: string }).error ?? "请求失败,请稍后重试",
+      (body as { error?: string }).error ?? "回答生成失败,请稍后重试。",
     );
   }
   return body as AskResponse;

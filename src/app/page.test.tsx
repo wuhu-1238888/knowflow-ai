@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AskPage from "@/app/page";
@@ -104,6 +111,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers(); // 防假定时器泄漏污染后续测试的 waitFor/findBy
   sessionStorage.clear();
 });
 
@@ -186,10 +194,10 @@ describe("AskPage 回答流", () => {
     expect(askCalls(fetchMock)).toHaveLength(1);
   });
 
-  it("loading 态显示「AI 生成中」胶囊,完成后切换为回答", async () => {
+  it("loading 态:胶囊+统一等待文案+骨架占位,按钮转「生成中…」防重复提交", async () => {
     let resolveFetch!: (response: Response) => void;
     // 仅 /api/ask 挂起(控制加载态);挂载反馈恢复 GET 由 helper 立即返回
-    stubFetchWithFeedback(
+    const fetchMock = stubFetchWithFeedback(
       () =>
         new Promise<Response>((resolve) => {
           resolveFetch = resolve;
@@ -201,14 +209,28 @@ describe("AskPage 回答流", () => {
     fireEvent.change(input, { target: { value: "年假有几天?" } });
     fireEvent.click(screen.getByRole("button", { name: "提问" }));
 
+    // 轻量 loading:胶囊 + 统一等待文案(2026-09-14;后端无阶段状态,
+    // 不伪造「检索→重排→生成」多阶段,也不再常显「约需 1 分钟」)
     expect(screen.getByText("AI 生成中")).toBeTruthy();
-    expect(screen.getByText(/首次回答约需 1 分钟/)).toBeTruthy();
-    const submit = screen.getByRole("button", { name: "提问" }) as HTMLButtonElement;
+    expect(screen.getByText("正在检索企业知识库并生成回答…")).toBeTruthy();
+    expect(screen.queryByText(/约需 1 分钟/)).toBeNull();
+    expect(screen.queryByText(/正在重排/)).toBeNull();
+    expect(screen.queryByText(/正在筛选/)).toBeNull();
+    // 答案区 Skeleton(与回答卡同结构占位),不再大面积空白
+    expect(screen.getByRole("status", { name: "正在生成回答" })).toBeTruthy();
+    // 按钮:生成中… + 禁用;再点不产生第二个请求
+    const submit = screen.getByRole("button", { name: "生成中…" }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
+    expect(submit.getAttribute("aria-busy")).toBe("true");
+    fireEvent.click(submit);
+    expect(askCalls(fetchMock)).toHaveLength(1);
 
     resolveFetch(jsonResponse(ANSWER_RESPONSE));
     expect(await screen.findByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    // 完成后:胶囊/Skeleton 消失,按钮恢复「提问」可再次提交
     expect(screen.queryByText("AI 生成中")).toBeNull();
+    expect(screen.queryByRole("status", { name: "正在生成回答" })).toBeNull();
+    expect(screen.getByRole("button", { name: "提问" })).toBeTruthy();
   });
 });
 
@@ -580,7 +602,7 @@ describe("AskPage 拒答 / 冲突 / 失败", () => {
     fireEvent.click(screen.getByRole("button", { name: "年假有几天?" }));
     expect(await screen.findByText("回答失败")).toBeTruthy();
     // 浏览器侧网络失败(非 BFF 结构化错误)显示通用文案;BFF 的 503/504 文案由 route 层保证
-    expect(screen.getByText("请求失败,请稍后重试")).toBeTruthy();
+    expect(screen.getByText("回答生成失败,请稍后重试。")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     expect(await screen.findByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
@@ -645,5 +667,63 @@ describe("AskPage 返回上下文(2026-09-13)", () => {
     expect(await screen.findByText("知识库中未找到答案")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /上一版回答/ }));
     expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+  });
+});
+
+describe("AskPage 长等待话术(2026-09-14,假定时器,置于文件末尾防污染)", () => {
+  it("20 秒后切换「仍在处理中」+ 真实已等待秒数;首问追加冷启动提示,后续问题不追加", async () => {
+    // 假定时器下 waitFor/findBy 内部 setTimeout 被劫持会挂起 → 全部用
+    // act + advanceTimersByTimeAsync 冲刷微任务后同步断言。
+    vi.useFakeTimers();
+    let resolveFetch!: (response: Response) => void;
+    stubFetchWithFeedback(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    render(<AskPage />);
+
+    const input = screen.getByLabelText("提问内容") as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: "年假有几天?" } });
+    fireEvent.click(screen.getByRole("button", { name: "提问" }));
+
+    // 20 秒内:统一话术,无长等待文案,无冷启动提示
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(screen.getByText("正在检索企业知识库并生成回答…")).toBeTruthy();
+    expect(screen.queryByText(/仍在处理中/)).toBeNull();
+    expect(screen.queryByText(/首次回答可能需要更长时间/)).toBeNull();
+
+    // 满 20 秒:切换长等待话术 + 真实已等待秒数;首问追加冷启动提示
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000);
+    });
+    expect(
+      screen.getByText("仍在处理中,请稍候…已等待 20 秒"),
+    ).toBeTruthy();
+    expect(screen.getByText(/首次回答可能需要更长时间,请稍候…/)).toBeTruthy();
+    // 不伪造百分比/阶段进度
+    expect(screen.queryByText(/%/)).toBeNull();
+
+    // 完成:长等待话术与骨架消失,回答正常呈现
+    await act(async () => {
+      resolveFetch(jsonResponse(ANSWER_RESPONSE));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
+    expect(screen.queryByText(/仍在处理中/)).toBeNull();
+
+    // 第二问(本会话已有历史):长等待不再追加冷启动提示
+    fireEvent.change(input, { target: { value: "报销上限?" } });
+    fireEvent.click(screen.getByRole("button", { name: "提问" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20000);
+    });
+    expect(
+      screen.getByText("仍在处理中,请稍候…已等待 20 秒"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/首次回答可能需要更长时间/)).toBeNull();
   });
 });
