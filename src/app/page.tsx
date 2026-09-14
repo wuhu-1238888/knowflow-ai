@@ -56,6 +56,9 @@ export default function AskPage() {
   const [elapsed, setElapsed] = useState(0);
   /* 本会话首问(提交时无历史)→ 长等待时追加冷启动提示;绝不常显。 */
   const coldStartRef = useRef(false);
+  /* 回答/拒答卡进场动画(2026-09-14 人规格):仅「等待态 Skeleton → 结果」
+     切换时一次性 240ms;历史回看/快照恢复/重新生成不触发。 */
+  const [answerEntrance, setAnswerEntrance] = useState(false);
 
   /* 返回上下文(2026-09-13):挂载时标记来源(供文档详情页返回判断)并恢复
      本标签页的会话快照(从「查看原文」返回时问答上下文不丢)。 */
@@ -120,6 +123,8 @@ export default function AskPage() {
     setRefusal(entry.refusal);
     setSameNotice(entry.sameNotice);
     setError(null);
+    /* 回看是纯状态恢复,不播进场动画(规格:动画仅属于等待态 → 结果切换) */
+    setAnswerEntrance(false);
   };
 
   async function submit(question: string, regenerate = false) {
@@ -148,6 +153,8 @@ export default function AskPage() {
         setRefusal(result);
         setPrevious(regeneratedVersion);
         setLatest(null);
+        /* 等待态 → 结果切换才播进场动画;重新生成(旧卡可见,无 Skeleton)不播 */
+        setAnswerEntrance(!regenerate);
         pushHistory({
           query: trimmed,
           latest: null,
@@ -180,6 +187,7 @@ export default function AskPage() {
       setPrevious(regeneratedVersion);
       setLatest(nextVersion);
       setRefusal(null);
+      setAnswerEntrance(!regenerate);
       pushHistory({
         query: trimmed,
         latest: nextVersion,
@@ -223,27 +231,26 @@ export default function AskPage() {
       </div>
 
       {phase === "asking" ? (
-        <div className="flex flex-col gap-3" aria-busy="true">
+        <div aria-busy="true">
           {/* 「AI 生成中」胶囊:唯一 pill + 唯一 shimmer(白名单),仅首次提问使用;
               重新生成的加载态在最新回答卡内。后端无阶段状态 → 统一话术,
               不伪造「检索→重排→生成」多阶段;20 秒后切「仍在处理中」+
-              真实已等待秒数(2026-09-14,绝不常显「约需 1 分钟」) */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex animate-shimmer items-center gap-1.5 rounded-full bg-ai-gradient px-2.5 py-[3px] text-caption text-ink-inverse">
-              AI 生成中
-            </span>
-            <p className="text-body-sm text-ink-2">
-              {elapsed >= LONG_WAIT_SECONDS
+              真实已等待秒数(2026-09-14,绝不常显「约需 1 分钟」)。
+              2026-09-14 精修:胶囊 + 话术 + 冷启动提示在骨架卡顶部状态行内
+              (px-4,与真实回答卡元信息行同几何)——同一视觉内容容器,
+              文案不与卡片左边缘错位、不漂浮在卡片上方。 */}
+          <AnswerSkeleton
+            statusText={
+              elapsed >= LONG_WAIT_SECONDS
                 ? `仍在处理中,请稍候…已等待 ${elapsed} 秒`
-                : "正在检索企业知识库并生成回答…"}
-            </p>
-          </div>
-          {coldStartRef.current && elapsed >= LONG_WAIT_SECONDS ? (
-            <p className="-mt-1.5 text-caption text-ink-3">
-              首次回答可能需要更长时间,请稍候…
-            </p>
-          ) : null}
-          <AnswerSkeleton />
+                : "正在检索企业知识库并生成回答…"
+            }
+            coldStartHint={
+              coldStartRef.current && elapsed >= LONG_WAIT_SECONDS
+                ? "首次回答可能需要更长时间,请稍候…"
+                : null
+            }
+          />
         </div>
       ) : null}
 
@@ -271,7 +278,7 @@ export default function AskPage() {
       ) : null}
 
       {refusal ? (
-        <div className="flex flex-col gap-3">
+        <div className={`flex flex-col gap-3${answerEntrance ? " animate-answer-in" : ""}`}>
           <NoAnswerCallout
             reason={refusal.refusal_reason ?? "no_evidence"}
             relevantHits={refusal.relevant_hits ?? 0}
@@ -290,6 +297,7 @@ export default function AskPage() {
             qaId={latest.qa_id}
             versionMeta={`v${latest.version} · ${versionAgeLabel(latest.createdAt)}`}
             generating={phase === "regenerating"}
+            animateIn={answerEntrance}
             sameNotice={sameNotice}
             onRegenerate={() => void submit(lastQuery, true)}
           />

@@ -141,6 +141,14 @@ describe("L1 token 对拍:全局基础样式", () => {
     expect(THEME).toContain("--animate-skeleton: skeleton-pulse 1.6s ease-in-out infinite");
     expect(THEME).toContain("@keyframes skeleton-pulse");
   });
+
+  it("回答卡进场动画映射 motion.answer-in(240ms ease-out both,一次性非循环)", () => {
+    expect(THEME).toContain("--animate-answer-in: answer-in 240ms ease-out both");
+    expect(THEME).toContain("@keyframes answer-in");
+    // 仅 opacity + translateY,禁缩放/弹性(人规格 2026-09-14)
+    expect(THEME.match(/@keyframes answer-in[\s\S]*?\n\s*\}/)?.[0]).toMatch(/translateY\(4px\)/);
+    expect(THEME.match(/@keyframes answer-in[\s\S]*?\n\s*\}/)?.[0]).not.toMatch(/scale\(/);
+  });
 });
 
 describe("L1 token 对拍:containers(页面容器宽度)", () => {

@@ -99,6 +99,10 @@ export interface AnswerSheetProps {
   frame?: boolean;
   /** 本版本的冲突(Trust 层):非空时渲染在正文与依据之间(3.4.5)。 */
   conflicts?: ConflictItem[] | null;
+  /** 进场动画(2026-09-14 人规格):仅「等待态 Skeleton → 真实回答」切换时
+      由页面状态机传入;一次性 opacity 0→1 + translateY 4px→0(240ms),
+      禁缩放/弹性/渐变;历史回看与快照恢复不触发。 */
+  animateIn?: boolean;
 }
 
 export function AnswerSheet({
@@ -112,6 +116,7 @@ export function AnswerSheet({
   sameNotice = false,
   frame = true,
   conflicts = null,
+  animateIn = false,
 }: AnswerSheetProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [drawer, setDrawer] = useState<Citation | null>(null);
@@ -223,7 +228,7 @@ export function AnswerSheet({
   return (
     <section
       aria-label="回答"
-      className={frame ? "rounded-lg border border-hairline bg-surface" : ""}
+      className={`${frame ? "rounded-lg border border-hairline bg-surface" : ""}${animateIn ? " animate-answer-in" : ""}`}
     >
       {generating ? (
         <>

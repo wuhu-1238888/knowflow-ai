@@ -211,13 +211,15 @@ describe("AskPage 回答流", () => {
 
     // 轻量 loading:胶囊 + 统一等待文案(2026-09-14;后端无阶段状态,
     // 不伪造「检索→重排→生成」多阶段,也不再常显「约需 1 分钟」)
-    expect(screen.getByText("AI 生成中")).toBeTruthy();
-    expect(screen.getByText("正在检索企业知识库并生成回答…")).toBeTruthy();
     expect(screen.queryByText(/约需 1 分钟/)).toBeNull();
     expect(screen.queryByText(/正在重排/)).toBeNull();
     expect(screen.queryByText(/正在筛选/)).toBeNull();
-    // 答案区 Skeleton(与回答卡同结构占位),不再大面积空白
-    expect(screen.getByRole("status", { name: "正在生成回答" })).toBeTruthy();
+    // 答案区 Skeleton(与回答卡同结构占位),不再大面积空白;
+    // 2026-09-14 精修:胶囊 + 等待文案在骨架卡顶部状态行内(同一视觉内容
+    // 容器,文案不与卡片左边缘错位、不漂浮在卡片上方)
+    const status = screen.getByRole("status", { name: "正在生成回答" });
+    expect(within(status).getByText("AI 生成中")).toBeTruthy();
+    expect(within(status).getByText("正在检索企业知识库并生成回答…")).toBeTruthy();
     // 按钮:生成中… + 禁用;再点不产生第二个请求
     const submit = screen.getByRole("button", { name: "生成中…" }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
@@ -227,10 +229,14 @@ describe("AskPage 回答流", () => {
 
     resolveFetch(jsonResponse(ANSWER_RESPONSE));
     expect(await screen.findByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
-    // 完成后:胶囊/Skeleton 消失,按钮恢复「提问」可再次提交
+    // 完成后:胶囊/Skeleton 消失,按钮恢复「提问」可再次提交;
+    // 回答卡带一次性进场动画类(Skeleton → 回答切换专属)
     expect(screen.queryByText("AI 生成中")).toBeNull();
     expect(screen.queryByRole("status", { name: "正在生成回答" })).toBeNull();
     expect(screen.getByRole("button", { name: "提问" })).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: "回答" }).className,
+    ).toContain("animate-answer-in");
   });
 });
 
@@ -464,6 +470,11 @@ describe("AskPage 会话历史「最近问过」(2026-09-13,规格 9)", () => {
     expect(screen.getByText(/入职第一年享有 8 天 年假/)).toBeTruthy();
     expect(screen.queryByText(/另一问题的回答/)).toBeNull();
     expect(askCalls(fetchMock)).toHaveLength(askCount);
+    // 回看是纯状态恢复,不播进场动画(2026-09-14 人规格:动画仅属于
+    // 等待态 Skeleton → 结果切换)
+    expect(
+      screen.getByRole("region", { name: "回答" }).className,
+    ).not.toContain("animate-answer-in");
     // 回看后该条目呈选中态
     expect(
       (historyItems().buttons[1] as HTMLButtonElement).getAttribute(
