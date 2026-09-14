@@ -215,11 +215,13 @@ describe("AskPage 回答流", () => {
     expect(screen.queryByText(/正在重排/)).toBeNull();
     expect(screen.queryByText(/正在筛选/)).toBeNull();
     // 答案区 Skeleton(与回答卡同结构占位),不再大面积空白;
-    // 2026-09-14 精修:胶囊 + 等待文案在骨架卡顶部状态行内(同一视觉内容
-    // 容器,文案不与卡片左边缘错位、不漂浮在卡片上方)
+    // 2026-09-14 人拍板回调:胶囊 + 等待文案位于骨架卡上方、与卡片左边缘
+    // 对齐(同一 aria-busy 容器内,文案在卡外、不居中)
     const status = screen.getByRole("status", { name: "正在生成回答" });
-    expect(within(status).getByText("AI 生成中")).toBeTruthy();
-    expect(within(status).getByText("正在检索企业知识库并生成回答…")).toBeTruthy();
+    const waitingText = screen.getByText("正在检索企业知识库并生成回答…");
+    expect(status.contains(waitingText)).toBe(false);
+    expect(status.contains(screen.getByText("AI 生成中"))).toBe(false);
+    expect(waitingText.closest('[aria-busy="true"]')).toBe(status.parentElement);
     // 按钮:生成中… + 禁用;再点不产生第二个请求
     const submit = screen.getByRole("button", { name: "生成中…" }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);

@@ -231,26 +231,29 @@ export default function AskPage() {
       </div>
 
       {phase === "asking" ? (
-        <div aria-busy="true">
+        <div className="flex flex-col gap-3" aria-busy="true">
           {/* 「AI 生成中」胶囊:唯一 pill + 唯一 shimmer(白名单),仅首次提问使用;
               重新生成的加载态在最新回答卡内。后端无阶段状态 → 统一话术,
               不伪造「检索→重排→生成」多阶段;20 秒后切「仍在处理中」+
               真实已等待秒数(2026-09-14,绝不常显「约需 1 分钟」)。
-              2026-09-14 精修:胶囊 + 话术 + 冷启动提示在骨架卡顶部状态行内
-              (px-4,与真实回答卡元信息行同几何)——同一视觉内容容器,
-              文案不与卡片左边缘错位、不漂浮在卡片上方。 */}
-          <AnswerSkeleton
-            statusText={
-              elapsed >= LONG_WAIT_SECONDS
+              2026-09-14 人拍板回调:胶囊 + 话术 + 冷启动提示位于骨架卡上方,
+              与卡片左边缘对齐、左对齐排版(卡外、不居中)。 */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex animate-shimmer items-center gap-1.5 rounded-full bg-ai-gradient px-2.5 py-[3px] text-caption text-ink-inverse">
+              AI 生成中
+            </span>
+            <p className="text-body-sm text-ink-2">
+              {elapsed >= LONG_WAIT_SECONDS
                 ? `仍在处理中,请稍候…已等待 ${elapsed} 秒`
-                : "正在检索企业知识库并生成回答…"
-            }
-            coldStartHint={
-              coldStartRef.current && elapsed >= LONG_WAIT_SECONDS
-                ? "首次回答可能需要更长时间,请稍候…"
-                : null
-            }
-          />
+                : "正在检索企业知识库并生成回答…"}
+            </p>
+          </div>
+          {coldStartRef.current && elapsed >= LONG_WAIT_SECONDS ? (
+            <p className="-mt-1.5 text-caption text-ink-3">
+              首次回答可能需要更长时间,请稍候…
+            </p>
+          ) : null}
+          <AnswerSkeleton />
         </div>
       ) : null}
 
