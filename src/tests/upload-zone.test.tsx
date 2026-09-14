@@ -7,10 +7,11 @@ import {
   UploadZone,
 } from "@/components/documents/upload-zone";
 
-/* UploadZone(DesignSystem #8 + 2026-09-14 人规格):点击/键盘/拖拽三通道、
-   禁用态、格式校验、五级信息层级;Default/Hover/DragOver/Error/Uploading
-   五态(Hover 为 CSS-only 不测,其余四态类名与文案断言);错误经卡内
-   role=alert 呈现。 */
+/* UploadZone(DesignSystem #8 + 2026-09-14 人规格,当日回调收紧):点击/键盘/
+   拖拽三通道、禁用态、格式校验;信息层级 = 图标(20px)/主标题/支持格式/OCR
+   (操作提示行已删);Default/Hover/DragOver/Error/Uploading 五态(Hover 为
+   CSS-only 不测,其余四态类名与文案断言);拖拽/上传中提示在支持格式行原位换文;
+   错误经卡内 role=alert 呈现。 */
 
 describe("isSupportedFormat", () => {
   it("大小写不敏感地匹配 5 种受支持扩展名", () => {
@@ -34,18 +35,21 @@ describe("isSupportedFormat", () => {
 });
 
 describe("UploadZone", () => {
-  it("渲染五级信息层级:图标 + 主标题 + 操作提示 + 支持格式 + 限制说明(2026-09-14 人规格)", () => {
+  it("渲染信息层级:图标(20px) + 主标题 + 支持格式 + 限制说明,无操作提示行(2026-09-14 回调)", () => {
     const { container } = render(<UploadZone onBrowse={() => {}} onFile={() => {}} />);
-    // 线性 Upload 图标(装饰性,aria-hidden)
-    expect(container.querySelector("svg")).toBeTruthy();
+    // 线性 Upload 图标(装饰性,aria-hidden;回调缩小到 20px)
+    const icon = container.querySelector("svg");
+    expect(icon).toBeTruthy();
+    expect(icon!.getAttribute("class")).toContain("size-5");
     // 主标题 = 主要视觉信息(heading-2 明显高于说明文字)
     const title = screen.getByText("拖入或选择文档");
     expect(title.className).toContain("text-heading-2");
-    expect(screen.getByText("点击选择文件,或将文件拖拽到此处")).toBeTruthy();
     expect(screen.getByText(".md / .pdf / .docx / .html / .txt")).toBeTruthy();
     expect(
       screen.getByText("不支持扫描件 OCR,请先将扫描件转换为文本"),
     ).toBeTruthy();
+    // 回调:操作提示行删除(人拍板去冗余,保留三行)
+    expect(screen.queryByText("点击选择文件,或将文件拖拽到此处")).toBeNull();
   });
 
   it("点击触发 onBrowse", () => {
@@ -98,11 +102,12 @@ describe("UploadZone", () => {
     expect(zone.className).toContain("border-solid");
     expect(zone.className).toContain("border-brand-600");
     expect(zone.className).toContain("bg-brand-50");
-    // 操作提示原位换文案,不增行(布局稳定)
+    // 支持格式行原位换文案,不增行(布局稳定)
     expect(screen.getByText("松开鼠标以上传")).toBeTruthy();
-    expect(screen.queryByText("点击选择文件,或将文件拖拽到此处")).toBeNull();
+    expect(screen.queryByText(".md / .pdf / .docx / .html / .txt")).toBeNull();
     fireEvent.dragLeave(zone);
-    expect(screen.getByText("点击选择文件,或将文件拖拽到此处")).toBeTruthy();
+    expect(screen.getByText(".md / .pdf / .docx / .html / .txt")).toBeTruthy();
+    expect(screen.queryByText("松开鼠标以上传")).toBeNull();
   });
 
   it("error:danger 虚线 + 浅红底,错误行在卡内 role=alert(错误就在操作区)", () => {
@@ -134,6 +139,8 @@ describe("UploadZone", () => {
     const zone = screen.getByRole("button", { name: "拖入或选择文档上传" });
     expect(screen.getByText("正在上传 新政策.md…")).toBeTruthy();
     expect(screen.getByText("上传中,请稍候…")).toBeTruthy();
+    // 支持格式行已原位换成上传提示,不增行
+    expect(screen.queryByText(".md / .pdf / .docx / .html / .txt")).toBeNull();
     expect(zone.getAttribute("tabindex")).toBe("-1");
     fireEvent.click(zone);
     fireEvent.dragEnter(zone);

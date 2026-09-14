@@ -4,16 +4,17 @@ import { useRef, useState } from "react";
 
 import { IconUpload } from "@/components/icons";
 
-/* 上传区(DesignSystem #8 + 2026-09-14 人规格重做):信息层级 = 线性 Upload
-   图标 → 主标题「拖入或选择文档」→ 操作提示「点击选择文件,或将文件拖拽到
-   此处」→ 支持格式 → OCR 限制说明,整体垂直居中,逐级弱化、不抢重点。
+/* 上传区(DesignSystem #8 + 2026-09-14 人规格重做,当日回调收紧):信息层级 =
+   线性 Upload 图标(20px)→ 主标题「拖入或选择文档」→ 支持格式 → OCR 限制说明,
+   整体垂直居中,逐级弱化、不抢重点;操作提示行「点击选择文件…」已按人拍板
+   删除(冗余)。卡片上下内边距 24px(px-8 py-6),整体高约 160px。
    Default = 中性浅灰虚线框 + 白底;Hover = 虚线变品牌蓝 + brand-50 浅蓝底 +
    图标轻染品牌蓝(仅 150ms 色彩过渡,无发光/无动画装饰);
-   Drag Over = 品牌蓝实线 + brand-50 底 + 操作提示原位换「松开鼠标以上传」
+   Drag Over = 品牌蓝实线 + brand-50 底 + 支持格式行原位换「松开鼠标以上传」
    (不增行、无布局跳动;dragenter/dragleave 深度计数防子元素抖动);
    Error = danger 虚线 + danger-bg 底 + 卡内 role=alert 错误行(错误就在操作区);
-   Uploading = 标题换「正在上传 {name}…」+ 全通道禁用防重复提交,结构不变,
-   无假进度动画(真实进度 = 表格内乐观行)。
+   Uploading = 标题换「正在上传 {name}…」+ 支持格式行原位换「上传中,请稍候…」
+   + 全通道禁用防重复提交,结构不变,无假进度动画(真实进度 = 表格内乐观行)。
    键盘 = Enter/Space 触发浏览;焦点环走全局 :focus-visible(不再 outline-none)。
    上传/解析/索引逻辑不变,本组件只负责入口呈现与交互。 */
 
@@ -66,12 +67,12 @@ export function UploadZone({
         ? "cursor-pointer border-solid border-brand-600 bg-brand-50"
         : "cursor-pointer border-dashed border-hairline-strong bg-surface hover:border-brand-600 hover:bg-brand-50";
   const iconClass = isDisabled
-    ? "size-6 text-ink-3"
+    ? "size-5 text-ink-3"
     : error
-      ? "size-6 text-danger-text"
+      ? "size-5 text-danger-text"
       : dragging
-        ? "size-6 text-brand-600"
-        : "size-6 text-ink-3 transition-colors duration-150 group-hover:text-brand-600";
+        ? "size-5 text-brand-600"
+        : "size-5 text-ink-3 transition-colors duration-150 group-hover:text-brand-600";
 
   return (
     <div
@@ -110,7 +111,7 @@ export function UploadZone({
         }
       }}
       onDrop={handleDrop}
-      className={`group rounded-lg border p-8 text-center transition-colors duration-150 ${stateClasses}`}
+      className={`group rounded-lg border px-8 py-6 text-center transition-colors duration-150 ${stateClasses}`}
     >
       <div className="flex flex-col items-center">
         <IconUpload aria-hidden="true" className={iconClass} />
@@ -123,15 +124,18 @@ export function UploadZone({
             "拖入或选择文档"
           )}
         </p>
-        <p className="mt-1.5 text-body-sm text-ink-2">
-          {uploadingName
-            ? "上传中,请稍候…"
-            : dragging
-              ? "松开鼠标以上传"
-              : "点击选择文件,或将文件拖拽到此处"}
-        </p>
+        {/* 支持格式行 = 状态提示槽:拖拽/上传中在此行原位换文,不增行无跳动 */}
         <p className="mt-2 text-body-sm text-ink-2">
-          支持 <span className="font-mono">.md / .pdf / .docx / .html / .txt</span>
+          {uploadingName ? (
+            "上传中,请稍候…"
+          ) : dragging ? (
+            "松开鼠标以上传"
+          ) : (
+            <>
+              支持{" "}
+              <span className="font-mono">.md / .pdf / .docx / .html / .txt</span>
+            </>
+          )}
         </p>
         <p className="mt-1.5 text-caption text-ink-3">
           不支持扫描件 OCR,请先将扫描件转换为文本
