@@ -111,10 +111,11 @@
   --default-transition-duration: 150ms;
   --default-transition-timing-function: ease-out;
 
-  /* 「AI 生成中」胶囊呼吸(DesignSystem motion.shimmer);Skeleton 灰阶脉动
-     (components.skeleton.animation: opacity 1.6s ease-in-out infinite);
-     Spin 旋转 = 评测「运行评测」按钮进度指示(2026-09-13 闭环优化,取代
-     Tailwind 内置同名动画,统一走 token);三者均为白名单内仅有的循环动画。
+  /* Skeleton 灰阶脉动(components.skeleton.animation: opacity 1.6s ease-in-out
+     infinite);Spin 旋转 = 评测「运行评测」按钮进度指示(2026-09-13 闭环优化,
+     取代 Tailwind 内置同名动画,统一走 token);二者为白名单内仅有的循环动画。
+     shimmer(「AI 生成中」胶囊呼吸)已随 2026-09-14 人拍板退役(等待区改为
+     纯文字提示),token 保留备用。
      answer-in = 回答/拒答卡进场(2026-09-14 人规格):等待态 Skeleton →
      真实回答的一次性切换,仅 opacity + translateY,禁缩放/弹性,非循环 */
   --animate-shimmer: shimmer 1.6s linear infinite;
