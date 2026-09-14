@@ -56,7 +56,7 @@ describe("AppShell(按路由分档内容容器宽度,DesignSystem containers)", 
     ["/", "max-w-[960px]"],
     ["/eval", "max-w-[1152px]"],
     ["/documents", "max-w-[1152px]"],
-    ["/about", "max-w-[880px]"],
+    ["/about", "max-w-[960px]"],
     ["/unknown", "max-w-[960px]"],
     ["/documents/123", "max-w-[1152px]"],
   ])("%s → main 容器 %s(居中)", (pathname, widthClass) => {
@@ -69,6 +69,24 @@ describe("AppShell(按路由分档内容容器宽度,DesignSystem containers)", 
     const main = container.querySelector("main");
     expect(main?.className).toContain(widthClass);
     expect(main?.className).toContain("mx-auto");
+  });
+
+  it("两档容器体系(2026-09-14 人规格):阅读型(知识问答/关于)960、数据型(文档库/评测)1152", () => {
+    const widthOf = (path: string) => {
+      currentPathname.value = path;
+      const { container } = render(
+        <AppShell>
+          <p>内容</p>
+        </AppShell>,
+      );
+      return container.querySelector("main")?.className ?? "";
+    };
+    // 关于与知识问答同档(阅读型统一 960)
+    expect(widthOf("/about")).toBe(widthOf("/"));
+    expect(widthOf("/about")).toContain("max-w-[960px]");
+    // 文档库/评测保持数据型 1152,不受本次调整影响
+    expect(widthOf("/documents")).toContain("max-w-[1152px]");
+    expect(widthOf("/eval")).toContain("max-w-[1152px]");
   });
 
   it("main 无全局 760px 上限(宽度由路由分档接管)", () => {
