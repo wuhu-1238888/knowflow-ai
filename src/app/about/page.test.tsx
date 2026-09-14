@@ -31,6 +31,23 @@ describe("AboutPage 结构与定位一句话", () => {
     expect(text).toContain("明确拒答");
     expect(text).toContain("可复现的检索质量实测数据");
   });
+
+  it("标题层级(2026-09-14 人规格):产品定位 = 第一层级,其余三区块统一第二层级", () => {
+    render(<AboutPage />);
+
+    // 产品定位 = 全页最大 section 标题(heading-1 + 更强字重)
+    const primary = screen.getByRole("heading", { name: "产品定位" });
+    expect(primary.className).toContain("text-heading-1");
+    expect(primary.className).toContain("font-semibold");
+    // 演示数据声明 / 技术栈 / 产品边界 = 统一第二层级(heading-2 + 中性色)
+    for (const title of ["演示数据声明", "技术栈", "产品边界"]) {
+      const heading = screen.getByRole("heading", { name: title });
+      expect(heading.className).toContain("text-heading-2");
+      expect(heading.className).not.toContain("text-heading-1");
+      expect(heading.className).toContain("font-medium");
+      expect(heading.className).toContain("text-ink-2");
+    }
+  });
 });
 
 describe("AboutPage 演示数据声明(synthetic)", () => {
@@ -82,15 +99,36 @@ describe("AboutPage 技术栈(mono)", () => {
     expect(text).toContain("Mock 默认");
   });
 
-  it("技术栈值全部使用 mono 字体", () => {
+  it("技术栈值使用正文字体(非 mono)(2026-09-14 人规格:技术栈非代码展示)", () => {
     render(<AboutPage />);
 
     const stack = screen.getByRole("region", { name: "技术栈" });
     const values = stack.querySelectorAll("dd");
     expect(values.length).toBe(6);
     values.forEach((dd) => {
-      expect(dd.className).toContain("font-mono");
+      expect(dd.className).not.toContain("font-mono");
     });
+  });
+
+  it("技术栈分类为浅灰徽标 + 行内边距 py-3 + 行间 hairline 分割线(2026-09-14 人规格)", () => {
+    render(<AboutPage />);
+
+    const stack = screen.getByRole("region", { name: "技术栈" });
+    const labels = stack.querySelectorAll("dt");
+    expect(labels.length).toBe(6);
+    // 六类标签齐全且各自为浅灰徽标(neutral badge)
+    for (const label of ["前端", "后端", "数据", "检索", "生成", "解析"]) {
+      const dt = within(stack).getByText(label).closest("dt");
+      expect(dt).toBeTruthy();
+      expect(dt!.querySelector("span")?.className ?? "").toContain(
+        "bg-surface-2",
+      );
+    }
+    // 行内边距 py-3 + 行间分割线(divide-hairline)
+    const row = labels[0].parentElement!;
+    expect(row.className).toContain("py-3");
+    const dl = row.parentElement!;
+    expect(dl.className).toContain("divide-hairline");
   });
 });
 
@@ -108,5 +146,17 @@ describe("AboutPage 产品边界(不做清单摘要)", () => {
     // 摘要而非全文:不带 PRD 清单中的逐条扩展说明
     expect(text).toContain("MVP 为单租户演示");
     expect(text).toContain("「克隆即可跑」");
+  });
+
+  it("边界为中性灰圆点列表 + 统一间距(2026-09-14 人规格:快速区分,不串行)", () => {
+    render(<AboutPage />);
+
+    const boundary = screen.getByRole("region", { name: "产品边界" });
+    const list = boundary.querySelector("ul");
+    expect(list).toBeTruthy();
+    expect(list!.className).toContain("list-disc");
+    expect(list!.className).toContain("marker:text-ink-3");
+    expect(list!.className).toContain("space-y-2");
+    expect(list!.querySelectorAll("li").length).toBe(6);
   });
 });

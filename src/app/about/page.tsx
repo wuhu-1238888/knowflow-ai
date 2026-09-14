@@ -1,10 +1,15 @@
 import { PageHeader } from "@/components/ui/page-header";
+import { Badge } from "@/components/ui/badge";
 
-/* 关于页(3.3.5):产品定位 + NovaTech 虚构数据声明 + 技术栈 + 产品边界。
- * 纯静态服务端组件;所有事实(定位口径、技术栈、边界)与 memory-bank 定稿
- * 文档及仓库实况(package.json / requirements.txt / technical-design)一致。
- * DesignRules 关于页:定位一句话 → synthetic 声明卡(中性卡片,正文级排版)
- * → 技术栈列表(mono)→ 边界说明(不做清单摘要);
+/* 关于页(3.3.5;2026-09-14 排版层级优化):产品定位 + NovaTech 虚构数据声明
+ * + 技术栈 + 产品边界。纯静态服务端组件;所有事实(定位口径、技术栈、边界)
+ * 与 memory-bank 定稿文档及仓库实况(package.json / requirements.txt /
+ * technical-design)一致。
+ * 层级(2026-09-14 人规格):产品定位 = 页面第一层级(heading-1 20/600);
+ * 演示数据声明 / 技术栈 / 产品边界 = 统一第二层级(heading-2 16/500 ink-2),
+ * 层级靠字号 + 字重 + 间距建立,不用紫色/渐变。
+ * 技术栈 = 左侧浅灰分类徽标 + 正文体系(非 mono)+ 行内边距 py-3 + 行间
+ * hairline 分割线;产品边界 = 中性灰圆点列表(统一间距)。
  * 专属禁令:不将 NovaTech 描述为真实企业客户或真实商业项目。 */
 
 const TECH_STACK: { label: string; value: string }[] = [
@@ -61,9 +66,10 @@ const BOUNDARIES: { item: string; reason: string }[] = [
   },
 ];
 
+/* 第二层级 section 标题(2026-09-14 人规格):统一中等字号/字重 + 中性文字色 */
 function SectionTitle({ id, children }: { id: string; children: string }) {
   return (
-    <h2 id={id} className="text-heading-2 font-semibold text-ink">
+    <h2 id={id} className="text-heading-2 font-medium text-ink-2">
       {children}
     </h2>
   );
@@ -74,10 +80,13 @@ export default function AboutPage() {
     <div className="pb-4">
       <PageHeader title="关于" />
       <div className="mt-6 space-y-8">
-        {/* 定位一句话:product-vision 定稿口径,逐字一致 */}
+        {/* 定位一句话:product-vision 定稿口径,逐字一致。
+            第一层级(2026-09-14 人规格):全页最大 section 标题 + 更强字重 */}
         <section aria-labelledby="positioning">
-          <SectionTitle id="positioning">产品定位</SectionTitle>
-          <p className="mt-2 text-body-lg leading-relaxed text-ink">
+          <h2 id="positioning" className="text-heading-1 font-semibold text-ink">
+            产品定位
+          </h2>
+          <p className="mt-3 text-body-lg leading-relaxed text-ink">
             KnowFlow AI 是面向企业新员工的 AI 知识助手:用 RAG(向量 + 关键词混合检索 +
             重排)从企业知识库中给出带来源引用的准确回答,知识库没有答案时明确拒答,
             并附带可复现的检索质量实测数据——让企业用户更快、更准确、更可信地获取内部知识。
@@ -103,14 +112,17 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* 技术栈列表:mono 排版,行分隔线;版本与模型名来自仓库实况 */}
+        {/* 技术栈列表(2026-09-14 人规格):左侧浅灰分类徽标 + 正文体系(非 mono),
+            行内边距 py-3 + 行间 hairline 分割线;版本与模型名来自仓库实况 */}
         <section aria-labelledby="tech-stack">
           <SectionTitle id="tech-stack">技术栈</SectionTitle>
           <dl className="mt-2 divide-y divide-hairline border-y border-hairline">
             {TECH_STACK.map(({ label, value }) => (
-              <div key={label} className="flex gap-4 py-3">
-                <dt className="w-12 shrink-0 text-body-sm text-ink-2">{label}</dt>
-                <dd className="font-mono text-body-sm leading-relaxed text-ink">
+              <div key={label} className="flex items-center gap-4 py-3">
+                <dt className="w-12 shrink-0">
+                  <Badge className="w-12 justify-center">{label}</Badge>
+                </dt>
+                <dd className="text-body-sm leading-relaxed text-ink">
                   {value}
                 </dd>
               </div>
@@ -118,10 +130,11 @@ export default function AboutPage() {
           </dl>
         </section>
 
-        {/* 边界说明:不做清单摘要(PRD「明确不做清单」,合并同类项) */}
+        {/* 边界说明(2026-09-14 人规格):中性灰圆点列表 + 统一间距,文字不变;
+            不做清单摘要(PRD「明确不做清单」,合并同类项) */}
         <section aria-labelledby="boundary">
           <SectionTitle id="boundary">产品边界</SectionTitle>
-          <ul className="mt-2 space-y-1.5 text-body-md text-ink-2">
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-body-md text-ink-2 marker:text-ink-3">
             {BOUNDARIES.map(({ item, reason }) => (
               <li key={item}>
                 <span className="text-ink">{item}</span>: {reason}
