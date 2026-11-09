@@ -18,13 +18,14 @@ import {
   ApiError,
   askQuestion,
   deleteDocument,
+  edgeFallbackUrl,
   getDocument,
   getEvalRun,
   getFeedback,
   listDocuments,
   listEvalRuns,
   proxyToRag,
-  RAG_BASE_URL,
+  getRagBaseUrl,
   reindexDocument,
   sendFeedback,
   startEvalRun,
@@ -86,7 +87,7 @@ describe("proxyToRag / api/ask", () => {
     expect(await response.json()).toEqual(ASK_BODY);
     expect(mock).toHaveBeenCalledTimes(1);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${RAG_BASE_URL}/api/ask`);
+    expect(url).toBe(`${getRagBaseUrl()}/api/ask`);
     expect(init.method).toBe("POST");
     expect(JSON.parse(Buffer.from(init.body as ArrayBuffer).toString())).toEqual({
       query: "年假有几天?",
@@ -149,6 +150,122 @@ describe("proxyToRag / api/ask", () => {
     expect(response.status).toBe(504);
     expect(await response.json()).toEqual({ error: "RAG 服务响应超时,请稍后重试" });
   });
+
+  it("直连成功:不做网关回退,仅一次 fetch", async () => {
+    const mock = stubFetch(async () => jsonResponse(ASK_BODY));
+    const response = await postAsk(
+      new Request("http://localhost:3001/api/ask", { method: "POST", body: "{}" }),
+    );
+    expect(response.status).toBe(200);
+    expect(mock).toHaveBeenCalledTimes(1);
+    expect((mock.mock.calls[0] as [string, RequestInit])[0]).toBe(
+      `${getRagBaseUrl()}/api/ask`,
+    );
+  });
+
+  it("直连超时:不触发回退(避免总耗时翻倍)", async () => {
+    const mock = stubFetch(async (_url, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => {
+          const error = new Error("The operation was aborted due to timeout");
+          error.name = "TimeoutError";
+          reject(error);
+        });
+      }),
+    );
+    const response = await proxyToRag(
+      new Request("http://localhost:3001/api/ask", { method: "POST", body: "{}" }),
+      "/api/ask",
+      "POST",
+      10,
+    );
+    expect(response.status).toBe(504);
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("edgeFallbackUrl 与网关回退(前后端分容器部署)", () => {
+  it("edgeFallbackUrl:/api 前缀替换为 /rag", () => {
+    expect(
+      edgeFallbackUrl("https://knowflow-ai.pocketbay.app", "/api/ask"),
+    ).toBe("https://knowflow-ai.pocketbay.app/rag/ask");
+    expect(
+      edgeFallbackUrl("https://knowflow-ai.pocketbay.app", "/api/qa/qa-1/feedback"),
+    ).toBe("https://knowflow-ai.pocketbay.app/rag/qa/qa-1/feedback");
+    expect(
+      edgeFallbackUrl("https://knowflow-ai.pocketbay.app", "/other"),
+    ).toBe("https://knowflow-ai.pocketbay.app/other");
+  });
+
+  it("直连网络失败 → 回退同域 /rag 成功:200 透传,两次 fetch 路径正确", async () => {
+    const mock = stubFetch(async (url) => {
+      if (url === `${getRagBaseUrl()}/api/ask`) {
+        throw new TypeError("fetch failed");
+      }
+      return jsonResponse(ASK_BODY);
+    });
+    const response = await postAsk(
+      new Request("http://localhost:3001/api/ask", { method: "POST", body: "{}" }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(ASK_BODY);
+    expect(mock).toHaveBeenCalledTimes(2);
+    expect((mock.mock.calls[0] as [string, RequestInit])[0]).toBe(
+      `${getRagBaseUrl()}/api/ask`,
+    );
+    expect((mock.mock.calls[1] as [string, RequestInit])[0]).toBe(
+      "http://localhost:3001/rag/ask",
+    );
+  });
+
+  it("直连与回退均网络失败 → 503 可读错误态", async () => {
+    const mock = stubFetch(async () => {
+      throw new TypeError("fetch failed");
+    });
+    const response = await proxyToRag(
+      new Request("http://localhost:3001/api/ask", { method: "POST", body: "{}" }),
+      "/api/ask",
+      "POST",
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "RAG 服务不可达,请稍后重试" });
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
+
+  it("回退路径返回 FastAPI detail 404 → 状态码透传", async () => {
+    stubFetch(async (url) => {
+      if (url === `${getRagBaseUrl()}/api/ask`) {
+        throw new TypeError("fetch failed");
+      }
+      return jsonResponse({ detail: "文档不存在" }, 404);
+    });
+    const response = await proxyToRag(
+      new Request("http://localhost:3001/api/documents/doc-x", { method: "GET" }),
+      "/api/documents/doc-x",
+      "GET",
+    );
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "文档不存在" });
+  });
+
+  it("回退路径返回非 FastAPI 错误页(404 HTML)→ 视为服务不可达 503", async () => {
+    stubFetch(async (url) => {
+      if (url === `${getRagBaseUrl()}/api/ask`) {
+        throw new TypeError("fetch failed");
+      }
+      return new Response("<html>404 not found</html>", {
+        status: 404,
+        headers: { "content-type": "text/html" },
+      });
+    });
+    const response = await proxyToRag(
+      new Request("http://localhost:3001/api/ask", { method: "POST", body: "{}" }),
+      "/api/ask",
+      "POST",
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "RAG 服务不可达,请稍后重试" });
+  });
 });
 
 describe("其余代理路由(路径与 method 转发)", () => {
@@ -160,7 +277,7 @@ describe("其余代理路由(路径与 method 转发)", () => {
     );
     expect(response.status).toBe(200);
     expect((mock.mock.calls[0] as [string, RequestInit])[0]).toBe(
-      `${RAG_BASE_URL}/api/documents/doc-x`,
+      `${getRagBaseUrl()}/api/documents/doc-x`,
     );
     expect((mock.mock.calls[0] as [string, RequestInit])[1].method).toBe("DELETE");
   });
@@ -179,7 +296,7 @@ describe("其余代理路由(路径与 method 转发)", () => {
     );
     expect(response.status).toBe(200);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${RAG_BASE_URL}/api/qa/qa-1/feedback`);
+    expect(url).toBe(`${getRagBaseUrl()}/api/qa/qa-1/feedback`);
     expect(init.method).toBe("POST");
     expect(
       JSON.parse(Buffer.from(init.body as ArrayBuffer).toString()),
@@ -209,7 +326,7 @@ describe("其余代理路由(路径与 method 转发)", () => {
     );
     expect(response.status).toBe(200);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${RAG_BASE_URL}/api/qa/qa-1/feedback`);
+    expect(url).toBe(`${getRagBaseUrl()}/api/qa/qa-1/feedback`);
     expect(init.method).toBe("GET");
     expect(init.body).toBeUndefined();
   });
@@ -321,7 +438,7 @@ describe("文档管理 BFF 路由(3.3.3)", () => {
     );
     expect(response.status).toBe(200);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${RAG_BASE_URL}/api/documents?page=2&page_size=50`);
+    expect(url).toBe(`${getRagBaseUrl()}/api/documents?page=2&page_size=50`);
     expect(init.method).toBe("GET");
   });
 
@@ -338,7 +455,7 @@ describe("文档管理 BFF 路由(3.3.3)", () => {
     );
     expect(response.status).toBe(200);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${RAG_BASE_URL}/api/ingest`);
+    expect(url).toBe(`${getRagBaseUrl()}/api/ingest`);
     expect(init.method).toBe("POST");
     // proxyToRag 读 arrayBuffer 转发原始字节,multipart 边界与文件名由 content-type 携带
     expect(init.body).toBeInstanceOf(ArrayBuffer);
@@ -360,7 +477,7 @@ describe("文档管理 BFF 路由(3.3.3)", () => {
     );
     expect(response.status).toBe(200);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${RAG_BASE_URL}/api/documents/doc-1/reindex`);
+    expect(url).toBe(`${getRagBaseUrl()}/api/documents/doc-1/reindex`);
     expect(init.method).toBe("POST");
   });
 
@@ -374,7 +491,7 @@ describe("文档管理 BFF 路由(3.3.3)", () => {
     );
     expect(response.status).toBe(200);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${RAG_BASE_URL}/api/documents/doc-1`);
+    expect(url).toBe(`${getRagBaseUrl()}/api/documents/doc-1`);
     expect(init.method).toBe("GET");
   });
 });
@@ -521,7 +638,7 @@ describe("评测 BFF 路由与 typed client(3.3.4)", () => {
     );
     expect(response.status).toBe(200);
     const [url, init] = mock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${RAG_BASE_URL}/api/eval/runs/run-1`);
+    expect(url).toBe(`${getRagBaseUrl()}/api/eval/runs/run-1`);
     expect(init.method).toBe("GET");
   });
 

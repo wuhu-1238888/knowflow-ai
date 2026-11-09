@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -64,6 +64,10 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 上传大小上限(全量读内存前先�
 
 def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=None) -> FastAPI:
     app = FastAPI(title="KnowFlow AI RAG Service", version="0.1.0")
+    # 平台网关路径前缀兜底:同一组 API 路由双前缀挂载(/api/* 与 /rag/*)。
+    # 本地/常规部署用 /api/*;前后端分容器部署时,前端容器直连 127.0.0.1 不可达,
+    # BFF 回退到「同域 + /rag 前缀」,由平台边缘网关转发到本容器。
+    router = APIRouter()
     state = {
         "service": service,      # 测试注入的检索服务
         "pipeline": pipeline,    # 测试注入的问答管线
@@ -116,7 +120,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
     def health() -> dict[str, str]:
         return {"status": "ok", "service": "knowflow-rag"}
 
-    @app.post("/api/ask")
+    @router.post("/ask")
     def ask(req: AskRequest) -> dict:
         query = req.query.strip()
         if not query:
@@ -181,7 +185,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
             "relevant_hits": result.relevant_hits,
         }
 
-    @app.post("/api/qa/{qa_id}/feedback")
+    @router.post("/qa/{qa_id}/feedback")
     def feedback(qa_id: str, req: FeedbackRequest) -> dict:
         """FR-12 回答反馈:有用/无用,upsert 落库;QA 不存在 → 404。"""
         repo = _repo()
@@ -190,7 +194,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         repo.set_feedback(qa_id, req.rating, now_iso())
         return {"qa_id": qa_id, "rating": req.rating}
 
-    @app.get("/api/qa/{qa_id}/feedback")
+    @router.get("/qa/{qa_id}/feedback")
     def read_feedback(qa_id: str) -> dict:
         """FR-12 反馈读取(3.4.6):页面刷新后恢复该回答的已提交反馈;
         未提交过 → rating null;QA 不存在 → 404。"""
@@ -250,7 +254,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         repo.add_chunks(_chunk_rows(doc_id, result.text))
         return result.title, count
 
-    @app.get("/api/documents")
+    @router.get("/documents")
     def list_documents(
         page: int = Query(1, ge=1),
         page_size: int = Query(20, ge=1, le=100),
@@ -277,7 +281,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         ]
         return {"items": items, "total": total, "page": page, "page_size": page_size}
 
-    @app.get("/api/documents/{doc_id}")
+    @router.get("/documents/{doc_id}")
     def get_document_detail(doc_id: str) -> dict:
         """文档详情(2026-09-13 闭环优化):基本信息 + 内容预览 + chunks 列表,
         供文档库详情页与「在文档库中查看」定位;预览失败不阻塞详情(chunks 兜底)。"""
@@ -310,7 +314,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
             "chunks": chunks,
         }
 
-    @app.post("/api/ingest")
+    @router.post("/ingest")
     def ingest(file: UploadFile = File(...)) -> dict:
         """上传文档 → 解析 → 分块 → 索引;返回 doc_id 与最终状态。
 
@@ -369,7 +373,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
             "chunk_count": count,
         }
 
-    @app.delete("/api/documents/{doc_id}")
+    @router.delete("/documents/{doc_id}")
     def delete_document(doc_id: str) -> dict:
         """删除文档(FR-09,人显式触发):元数据 + chunks 级联 + 向量行 + 上传副本。
 
@@ -386,7 +390,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
             src.unlink(missing_ok=True)
         return {"deleted": doc_id}
 
-    @app.post("/api/documents/{doc_id}/reindex")
+    @router.post("/documents/{doc_id}/reindex")
     def reindex_document(doc_id: str) -> dict:
         """重建索引(人显式触发,FR-09):重读源文件 → 解析 → 索引 → 状态回写。
 
@@ -437,12 +441,12 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
             "has_per_case": bool(row.get("per_case_json")),
         }
 
-    @app.get("/api/eval/runs")
+    @router.get("/eval/runs")
     def list_eval_runs() -> dict:
         """全部评测运行摘要(新批次在前;同批次三行 created_at 相同)。"""
         return {"runs": [_run_summary(row) for row in _repo().list_runs()]}
 
-    @app.get("/api/eval/runs/{run_id}")
+    @router.get("/eval/runs/{run_id}")
     def get_eval_run(run_id: str) -> dict:
         """单次运行明细(含逐例 per_case,供 RunList 展开)。"""
         row = _repo().get_run(run_id)
@@ -453,7 +457,7 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
             summary["per_case"] = json.loads(row["per_case_json"])
         return summary
 
-    @app.post("/api/eval/run")
+    @router.post("/eval/run")
     def run_eval() -> JSONResponse:
         """启动三模式评测(后台线程,约数分钟);已有批次在跑 → 409。
 
@@ -489,6 +493,9 @@ def create_app(service=None, pipeline=None, repo=None, index=None, eval_runner=N
         started = runner(repo, out_dir)
         return JSONResponse(status_code=202, content=started)
 
+    # 双前缀挂载:常规 /api/*(本地与 BFF 直连不变)+ /rag/*(平台边缘网关兜底路径)。
+    app.include_router(router, prefix="/api")
+    app.include_router(router, prefix="/rag")
     return app
 
 

@@ -1,13 +1,33 @@
 /* RAG BFF 代理与 typed client(任务 3.3.1)。
  * 链路:浏览器 → Next.js route handler(同源,无 CORS)→ FastAPI 127.0.0.1:8000。
+ * 部署平台前后端分容器时,直连失败自动回退「同域 + /rag 前缀」经平台网关访问 API 容器
+ * (对应后端 main.py 的双前缀挂载 /api/* 与 /rag/*)。
  * 约定:上游非 2xx → 状态码透传 + 统一可读错误态 {error};网络失败 → 503;超时 → 504。
  * 超时口径:ask 首次调用含模型加载(~60s 实测),上限 120s;后端 LLM 30s 超时待真实 provider 生效。
  */
 
 import { NextResponse } from "next/server";
 
-export const RAG_BASE_URL = "http://127.0.0.1:8000";
 export const RAG_TIMEOUT_MS = 120_000;
+
+/**
+ * RAG 服务地址(服务端 BFF 使用,不进浏览器)。
+ * 默认 127.0.0.1:8000(本地单机架构);部署平台(如 PocketBay 前后端分容器)通过
+ * RAG_BASE_URL 环境变量注入容器间可访问的内部地址。
+ * 未注入且直连失败时,proxyToRag 自动回退「同域 + /rag 前缀」(见 edgeFallbackUrl)。
+ */
+export function getRagBaseUrl(): string {
+  return process.env.RAG_BASE_URL ?? "http://127.0.0.1:8000";
+}
+
+/**
+ * 部署平台边缘网关兜底地址:后端 FastAPI 将同一组路由同时挂在 /api/* 与 /rag/* 下,
+ * Next 未定义 /rag/* 路由,平台网关会把这类路径转发给 API 容器。
+ * 因此直连失败时,回退到「请求同域 + /rag 前缀」即可经网关触达 FastAPI。
+ */
+export function edgeFallbackUrl(origin: string, upstreamPath: string): string {
+  return `${origin}${upstreamPath.replace(/^\/api(?=\/|$)/, "/rag")}`;
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -46,21 +66,40 @@ export async function proxyToRag(
   method: "GET" | "POST" | "DELETE",
   timeoutMs: number = RAG_TIMEOUT_MS,
 ): Promise<NextResponse> {
-  let upstream: Response;
-  try {
-    upstream = await fetch(`${RAG_BASE_URL}${upstreamPath}`, {
+  const headers = {
+    "content-type": request.headers.get("content-type") ?? "application/json",
+  };
+  const requestBody = method === "GET" ? undefined : await request.arrayBuffer();
+  const attempt = (url: string) =>
+    fetch(url, {
       method,
-      headers: {
-        "content-type": request.headers.get("content-type") ?? "application/json",
-      },
-      body: method === "GET" ? undefined : await request.arrayBuffer(),
+      headers,
+      body: requestBody,
       signal: AbortSignal.timeout(timeoutMs),
     });
+
+  let upstream: Response;
+  let usedFallback = false;
+  try {
+    upstream = await attempt(`${getRagBaseUrl()}${upstreamPath}`);
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
+      // 直连超时不再回退(网关路径大概率同样超时),避免总耗时翻倍。
       return errorPayload(504, "RAG 服务响应超时,请稍后重试");
     }
-    return errorPayload(503, "RAG 服务不可达,请稍后重试");
+    // 直连网络失败(连接拒绝/DNS 等):前后端分容器部署时,回退「同域 + /rag 前缀」
+    // 经平台边缘网关访问 API 容器;本地单机直连正常时不会走到这里。
+    usedFallback = true;
+    try {
+      upstream = await attempt(
+        edgeFallbackUrl(new URL(request.url).origin, upstreamPath),
+      );
+    } catch (fallbackError) {
+      if (fallbackError instanceof Error && fallbackError.name === "TimeoutError") {
+        return errorPayload(504, "RAG 服务响应超时,请稍后重试");
+      }
+      return errorPayload(503, "RAG 服务不可达,请稍后重试");
+    }
   }
   let body: unknown = null;
   try {
@@ -69,8 +108,12 @@ export async function proxyToRag(
     body = null;
   }
   if (!upstream.ok) {
-    const message = upstreamDetail(body) || `上游服务错误(${upstream.status})`;
-    return errorPayload(upstream.status, message);
+    const message = upstreamDetail(body);
+    if (!message && usedFallback) {
+      // 回退路径上的非 FastAPI 错误页(如网关/Next 的 404 HTML)→ 视为服务不可达。
+      return errorPayload(503, "RAG 服务不可达,请稍后重试");
+    }
+    return errorPayload(upstream.status, message || `上游服务错误(${upstream.status})`);
   }
   return NextResponse.json(body);
 }
