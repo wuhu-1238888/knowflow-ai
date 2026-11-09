@@ -12,6 +12,7 @@ ask 链路:检索本地同步;LLM 调用真实 provider 时单次超时 60s(deep
 
 import json
 import logging
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,16 +22,22 @@ from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from .answer_pipeline import ASK_MODES, AnswerPipeline
-from .chunker import chunk_text
-from .config import get_runtime_dir, get_uploads_dir
-from .db import init_db
-from .eval_engine import start_eval
-from .indexing import BgeM3Embedder, LanceIndex
-from .llm_adapter import get_provider
-from .parsing import SUPPORTED_EXTENSIONS, EmptyTextError, ParsingError, parse_file
-from .repository import Repository, new_id, now_iso
-from .retrieval import BgeReranker, RetrievalService, TOP_K
+# 兼容两种运行方式:本地/生产常用模块模式(python -m uvicorn rag_service.main:app),
+# 平台容器可能以脚本方式直接运行本文件(python rag_service/main.py)——此时
+# __package__ 为空、相对导入失败;把项目根加入 sys.path 后统一使用绝对导入。
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from rag_service.answer_pipeline import ASK_MODES, AnswerPipeline
+from rag_service.chunker import chunk_text
+from rag_service.config import get_runtime_dir, get_uploads_dir
+from rag_service.db import init_db
+from rag_service.eval_engine import start_eval
+from rag_service.indexing import BgeM3Embedder, LanceIndex
+from rag_service.llm_adapter import get_provider
+from rag_service.parsing import SUPPORTED_EXTENSIONS, EmptyTextError, ParsingError, parse_file
+from rag_service.repository import Repository, new_id, now_iso
+from rag_service.retrieval import BgeReranker, RetrievalService, TOP_K
 
 logger = logging.getLogger(__name__)
 # uvicorn 默认不配置 root/应用 logger(INFO 被 lastResort 丢弃)→ 显式挂 handler,

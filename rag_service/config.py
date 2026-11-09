@@ -25,6 +25,11 @@ CASES_PATH = PROJECT_ROOT / "docs" / "demo-data" / "evaluation" / "cases.yaml"
 
 
 def get_runtime_dir() -> Path:
+    # 部署平台(PocketBay)注入 POCKETBAY_DATA_DIR 指向持久卷 /data,优先使用;
+    # 本地无该变量,行为不变(KNOWFLOW_RUNTIME_DIR 或默认 runtime/)。
+    pocketbay_dir = os.environ.get("POCKETBAY_DATA_DIR")
+    if pocketbay_dir:
+        return Path(pocketbay_dir)
     return Path(os.environ.get("KNOWFLOW_RUNTIME_DIR", DEFAULT_RUNTIME_DIR))
 
 
