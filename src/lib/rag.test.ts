@@ -19,6 +19,7 @@ import {
   askQuestion,
   deleteDocument,
   edgeFallbackUrl,
+  fallbackOrigins,
   getDocument,
   getEvalRun,
   getFeedback,
@@ -197,6 +198,31 @@ describe("edgeFallbackUrl 与网关回退(前后端分容器部署)", () => {
     ).toBe("https://knowflow-ai.pocketbay.app/other");
   });
 
+  it("fallbackOrigins:x-forwarded-host 存在时优先(网关改写 Host 场景)", () => {
+    const request = new Request("http://internal-frontend:8080/api/ask", {
+      headers: {
+        "x-forwarded-host": "knowflow-ai.pocketbay.app",
+        "x-forwarded-proto": "https",
+      },
+    });
+    expect(fallbackOrigins(request)).toEqual([
+      "https://knowflow-ai.pocketbay.app",
+      "http://internal-frontend:8080",
+    ]);
+  });
+
+  it("fallbackOrigins:无 x-forwarded-host 时仅请求自身 origin", () => {
+    const request = new Request("http://localhost:3001/api/ask");
+    expect(fallbackOrigins(request)).toEqual(["http://localhost:3001"]);
+  });
+
+  it("fallbackOrigins:x-forwarded-host 与请求 origin 相同时去重", () => {
+    const request = new Request("https://knowflow-ai.pocketbay.app/api/ask", {
+      headers: { "x-forwarded-host": "knowflow-ai.pocketbay.app" },
+    });
+    expect(fallbackOrigins(request)).toEqual(["https://knowflow-ai.pocketbay.app"]);
+  });
+
   it("直连网络失败 → 回退同域 /rag 成功:200 透传,两次 fetch 路径正确", async () => {
     const mock = stubFetch(async (url) => {
       if (url === `${getRagBaseUrl()}/api/ask`) {
@@ -215,6 +241,29 @@ describe("edgeFallbackUrl 与网关回退(前后端分容器部署)", () => {
     );
     expect((mock.mock.calls[1] as [string, RequestInit])[0]).toBe(
       "http://localhost:3001/rag/ask",
+    );
+  });
+
+  it("直连网络失败 → 回退优先用 x-forwarded-host 公开域名", async () => {
+    const mock = stubFetch(async (url) => {
+      if (url === `${getRagBaseUrl()}/api/ask`) {
+        throw new TypeError("fetch failed");
+      }
+      return jsonResponse(ASK_BODY);
+    });
+    const response = await postAsk(
+      new Request("http://internal-frontend:8080/api/ask", {
+        method: "POST",
+        headers: {
+          "x-forwarded-host": "knowflow-ai.pocketbay.app",
+          "x-forwarded-proto": "https",
+        },
+        body: "{}",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect((mock.mock.calls[1] as [string, RequestInit])[0]).toBe(
+      "https://knowflow-ai.pocketbay.app/rag/ask",
     );
   });
 

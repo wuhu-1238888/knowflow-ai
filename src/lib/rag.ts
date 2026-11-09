@@ -29,6 +29,22 @@ export function edgeFallbackUrl(origin: string, upstreamPath: string): string {
   return `${origin}${upstreamPath.replace(/^\/api(?=\/|$)/, "/rag")}`;
 }
 
+/**
+ * 回退候选 origin(分容器部署):平台网关可能改写转发给 Next 的 Host,
+ * 此时 x-forwarded-host 仍保留原始公开域名,优先使用;否则用请求自身 origin。
+ */
+export function fallbackOrigins(request: Request): string[] {
+  const url = new URL(request.url);
+  const origins: string[] = [];
+  const xfh = request.headers.get("x-forwarded-host");
+  if (xfh) {
+    const xfp = request.headers.get("x-forwarded-proto");
+    origins.push(`${xfp ?? url.protocol.replace(":", "")}://${xfh}`);
+  }
+  origins.push(url.origin);
+  return [...new Set(origins)];
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -78,44 +94,43 @@ export async function proxyToRag(
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-  let upstream: Response;
-  let usedFallback = false;
-  try {
-    upstream = await attempt(`${getRagBaseUrl()}${upstreamPath}`);
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      // 直连超时不再回退(网关路径大概率同样超时),避免总耗时翻倍。
-      return errorPayload(504, "RAG 服务响应超时,请稍后重试");
-    }
-    // 直连网络失败(连接拒绝/DNS 等):前后端分容器部署时,回退「同域 + /rag 前缀」
-    // 经平台边缘网关访问 API 容器;本地单机直连正常时不会走到这里。
-    usedFallback = true;
+  /* 候选顺序:直连(本地单机/注入地址)→ 回退(同域 + /rag 前缀,经平台网关)。
+   * 回退 origin 依次取 x-forwarded-host(网关改写 Host 时保留公开域名)与请求自身。 */
+  const candidates = [
+    `${getRagBaseUrl()}${upstreamPath}`,
+    ...fallbackOrigins(request).map((origin) => edgeFallbackUrl(origin, upstreamPath)),
+  ];
+  let lastError: unknown = null;
+  for (const candidate of candidates) {
+    let upstream: Response;
     try {
-      upstream = await attempt(
-        edgeFallbackUrl(new URL(request.url).origin, upstreamPath),
-      );
-    } catch (fallbackError) {
-      if (fallbackError instanceof Error && fallbackError.name === "TimeoutError") {
+      upstream = await attempt(candidate);
+    } catch (error) {
+      lastError = error;
+      if (error instanceof Error && error.name === "TimeoutError") {
+        // 超时不继续尝试下一个候选(同域网关大概率同样超时),避免总耗时翻倍。
         return errorPayload(504, "RAG 服务响应超时,请稍后重试");
       }
-      return errorPayload(503, "RAG 服务不可达,请稍后重试");
+      continue; // 网络失败(连接拒绝/DNS 等)→ 尝试下一个候选
     }
-  }
-  let body: unknown = null;
-  try {
-    body = await upstream.json();
-  } catch {
-    body = null;
-  }
-  if (!upstream.ok) {
+    let body: unknown = null;
+    try {
+      body = await upstream.json();
+    } catch {
+      body = null;
+    }
+    if (upstream.ok) {
+      return NextResponse.json(body);
+    }
     const message = upstreamDetail(body);
-    if (!message && usedFallback) {
-      // 回退路径上的非 FastAPI 错误页(如网关/Next 的 404 HTML)→ 视为服务不可达。
-      return errorPayload(503, "RAG 服务不可达,请稍后重试");
+    if (message) {
+      // FastAPI 错误体(detail 字符串/数组)→ 权威,透传。
+      return errorPayload(upstream.status, message);
     }
-    return errorPayload(upstream.status, message || `上游服务错误(${upstream.status})`);
+    // 非 FastAPI 错误页(网关/Next 的 404 HTML)→ 尝试下一个候选。
+    lastError = new Error(`non-rag-response:${upstream.status}`);
   }
-  return NextResponse.json(body);
+  return errorPayload(503, "RAG 服务不可达,请稍后重试");
 }
 
 /* ── /api/ask 响应 schema(与后端 main.py 一致)── */
